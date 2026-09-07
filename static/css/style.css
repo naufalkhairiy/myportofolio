@@ -16,6 +16,10 @@
     --radius: 4px;
 }
 
+html {
+    scroll-behavior: smooth;
+}
+
 body {
     font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     color: var(--ink);
@@ -62,6 +66,11 @@ h1, .brand {
     color: var(--ink);
     text-decoration: none;
     font-size: 0.95rem;
+    transition: color 0.2s ease;
+}
+
+.site-header nav a:hover {
+    color: var(--accent);
 }
 
 /*Section Hero dengan CSS Grid*/
@@ -203,7 +212,59 @@ h1, .brand {
 }
 
 .education {
-    background-color: yellow;
-    color: black;
-    padding: 50px 0;
+    padding: 5rem 0;
+    border-top: 1px solid var(--line);
+}
+
+.education h2 {
+    font-family: "Space Grotesk", -apple-system, sans-serif;
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
+}
+
+
+.education-item h3 {
+    font-family: "Space Grotesk", -apple-system, sans-serif;
+    font-size: 1.1rem;
+    transition: color 0.2s ease;
+}
+
+.education-item p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.education-item {
+    display: grid;
+    grid-template-columns: 2fr 1fr auto;
+    gap: 1rem;
+    align-items: center;
+
+    padding: 1.5rem 0;
+    border-top: 1px solid var(--line);
+
+    transition: padding-left 0.2s ease;
+}
+
+.education-item:hover {
+    padding-left: 0.75rem;
+}
+
+.education-item:hover h3 {
+    color: var(--accent);
+}
+
+@media (max-width: 600px) {
+    .education {
+        padding: 3.5rem 0;
+    }
+
+    .education-item {
+        grid-template-columns: 1fr;
+        gap: 0.25rem;
+    }
+
+    .education h2 {
+        font-size: 2rem;
+    }
 }
