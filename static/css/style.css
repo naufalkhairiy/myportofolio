@@ -73,7 +73,7 @@ h1, .brand {
     color: var(--accent);
 }
 
-/*Section Hero dengan CSS Grid*/
+/* Hero Section dengan CSS Grid*/
 
 .hero {
     padding: 4.5rem 0 5rem;
@@ -211,6 +211,8 @@ h1, .brand {
     }
 }
 
+/* Education Section */
+
 .education {
     padding: 5rem 0;
     border-top: 1px solid var(--line);
@@ -220,37 +222,6 @@ h1, .brand {
     font-family: "Space Grotesk", -apple-system, sans-serif;
     font-size: 2.5rem;
     margin-bottom: 2rem;
-}
-
-
-.education-item h3 {
-    font-family: "Space Grotesk", -apple-system, sans-serif;
-    font-size: 1.1rem;
-    transition: color 0.2s ease;
-}
-
-.education-item h3 a {
-    color: inherit;
-    text-decoration: none;
-}
-
-.education-item h3 a::after {
-    content: " ↗";
-    display: inline-block;
-    margin-left: 0.3rem;
-    opacity: 0;
-    transform: translateX(-0.25rem);
-    transition: opacity 0.2s ease, transform 0.2s ease;
-}
-
-.education-item:hover h3 a::after {
-    opacity: 1;
-    transform: translateX(0);
-}
-
-.education-item p {
-    color: var(--text-muted);
-    font-size: 0.9rem;
 }
 
 .education-item {
@@ -265,12 +236,55 @@ h1, .brand {
     transition: padding-left 0.2s ease;
 }
 
+.education-item h3 {
+    font-family: "Space Grotesk", -apple-system, sans-serif;
+    font-size: 1.1rem;
+}
+
+.education-item h3 a {
+    color: inherit;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.education-item h3 a::after {
+    content: "↗";
+    display: inline-block;
+    margin-left: 0.3rem;
+    opacity: 0;
+    transform: translateX(-0.25rem);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.education-item:hover h3 a::after {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.education-item h3 a:focus-visible::after {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.education-item p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+
 .education-item:hover {
     padding-left: 0.75rem;
 }
 
-.education-item:hover h3 {
+.education-item:hover h3 a {
     color: var(--accent);
+}
+
+.site-header a:focus-visible,
+.social-link:focus-visible,
+.education-item h3 a:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
 }
 
 @media (max-width: 600px) {
