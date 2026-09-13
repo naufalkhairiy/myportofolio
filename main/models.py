@@ -24,3 +24,21 @@ class Experience(models.Model):
     @property
     def is_ongoing(self):
         return self.ended_at is None
+
+
+class Education(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    institution = models.CharField(max_length=255)
+    program = models.CharField(max_length=255, blank=True)
+    start_year = models.PositiveBigIntegerField()
+    end_year = models.PositiveBigIntegerField(blank=True, null = True)
+    website = models.URLField(blank=True)
+    description = models.TextField(blank=True)
+
+
+def __str__(self):
+    return self.institution
+
+@property
+def is_current(self):
+    return self.end_year is None
