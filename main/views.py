@@ -26,7 +26,7 @@ def show_experience(request):
 
 def show_education(request):
     context = {
-        "nickname": "Khairy",
-        "education_list" : Education.objects.all
+        "nickname": "Khairiy",
+        "education_list" : Education.objects.all().order_by("-start_year")
     }
     return render(request, "education.html", context)
