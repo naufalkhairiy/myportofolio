@@ -10,7 +10,7 @@ def show_main(request):
         "npm": "2506621850",
         "study_program": "S1 Ilmu Komputer",
         "bio": (
-            "Second Year Computer Science @Universitas Indonesia"
+            "Second Year Computer Science @Universitas Indonesia | "
             "Cyber Security and Robotics Enthusiast."
         ),
     }
@@ -19,7 +19,7 @@ def show_main(request):
 
 def show_experience(request):
     context = {
-        "name": "Khairiy",
+        "nickname": "Khairiy",
         "experience_list": Experience.objects.all(),
     }
     return render(request, "experience.html", context)
