@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 
 from main.models import Experience, Education
 
@@ -30,3 +30,13 @@ def show_education(request):
         "education_list" : Education.objects.all().order_by("-start_year")
     }
     return render(request, "education.html", context)
+
+def show_education_detail(request, education_id):
+    education = get_object_or_404(Education, id=education_id)
+
+    context = {
+        "nickname": "Khairiy",
+        "education": education,
+    }
+
+    return render(request, "education_detail.html", context)

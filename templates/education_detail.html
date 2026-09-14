@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>{{ education.institution }} - {{ nickname }}</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap"
+        rel="stylesheet"
+    >
+
+    <link rel="stylesheet" href="/static/css/style.css?v=2">
+</head>
+
+<body>
+    <header class="site-header">
+        <div class="container">
+            <a href="{% url 'main:show_main' %}" class="brand">
+                {{ nickname }}
+            </a>
+
+            <nav>
+                <a href="{% url 'main:show_main' %}">Profile</a>
+                <a href="{% url 'main:show_experience' %}">Experience</a>
+                <a href="{% url 'main:show_education' %}">Education</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <section class="education">
+            <div class="container">
+
+                <a
+                    href="{% url 'main:show_education' %}"
+                    class="education-action-link"
+                >
+                    ← Back to Education
+                </a>
+
+                <h1>{{ education.institution }}</h1>
+
+                <p>
+                    <strong>Program:</strong>
+                    {{ education.program }}
+                </p>
+
+                <p>
+                    <strong>Period:</strong>
+                    {{ education.start_year }}
+                    -
+                    {% if education.is_current %}
+                        Present
+                    {% else %}
+                        {{ education.end_year }}
+                    {% endif %}
+                </p>
+
+                {% if education.description %}
+                    <p>
+                        {{ education.description }}
+                    </p>
+                {% endif %}
+
+                {% if education.website %}
+                    <p>
+                        <a
+                            href="{{ education.website }}"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="education-action-link"
+                        >
+                            Visit Institution Website
+                        </a>
+                    </p>
+                {% endif %}
+
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>
+                &copy; 2026 {{ nickname }}.
+                Fakultas Ilmu Komputer, Universitas Indonesia.
+            </p>
+        </div>
+    </footer>
+</body>
+</html>

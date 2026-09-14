@@ -14,7 +14,7 @@
         rel="stylesheet"
     >
     
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/style.css?v=2">
 </head>
 
 <body>
@@ -69,6 +69,13 @@
                                 {{ education.end_year  }}
                             {% endif %}
                         </p>
+
+                        <a
+                            href="{% url 'main:show_education_detail' education.id %}"
+                            class="education-action-link"
+                        >
+                            View Details
+                        </a>
 
                     </article>
 
