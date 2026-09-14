@@ -1,3 +1,4 @@
+import uuid
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -99,3 +100,41 @@ class EducationPageTests(TestCase):
         self.education.save()
 
         self.assertFalse(self.education.is_current)
+
+    def test_education_detail_page_is_accessible(self):
+        response = self.client.get(
+            reverse(
+                "main:show_education_detail",
+                args=[self.education.id]
+            )
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "education_detail.html")
+
+
+    def test_education_detail_displays_correct_data(self):
+        response = self.client.get(
+            reverse(
+                "main:show_education_detail",
+                args=[self.education.id]
+            )
+        )
+
+        self.assertContains(response, "Universitas Indonesia")
+        self.assertContains(response, "S1 Ilmu Komputer")
+        self.assertContains(response, "2025")
+        self.assertContains(response, "Present")
+
+
+    def test_nonexistent_education_detail_returns_404(self):
+        nonexistent_id = uuid.uuid4()
+
+        response = self.client.get(
+            reverse(
+                "main:show_education_detail",
+                args=[nonexistent_id]
+            )
+        )
+
+        self.assertEqual(response.status_code, 404)
