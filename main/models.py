@@ -36,9 +36,9 @@ class Education(models.Model):
     description = models.TextField(blank=True)
 
 
-def __str__(self):
-    return self.institution
+    def __str__(self):
+        return self.institution
 
-@property
-def is_current(self):
-    return self.end_year is None
+    @property
+    def is_current(self):
+        return self.end_year is None
