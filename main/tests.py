@@ -1,3 +1,4 @@
+import json
 import uuid
 from django.test import TestCase
 from django.urls import reverse
@@ -138,3 +139,137 @@ class EducationPageTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 404)
+
+class EducationCRUDTests(TestCase):
+    def setUp(self):
+        self.education = Education.objects.create(
+            institution="Universitas Indonesia",
+            program="S1 Ilmu Komputer",
+            start_year = 2025,
+            end_year = None,
+            website ="https://www.ui.ac.id/",
+            description="Computer Science student.",
+        )
+
+    def test_create_education(self):
+        response = self.client.post(
+            reverse("main:create_education"),
+            {
+                "institution":"Test University",
+                "program":"Computer Science",
+                "start_year": 2026,
+                "end_year":"",
+                "website": "https://example.com/",
+                "description":"Test education",
+            }
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("main:show_education")
+        )
+
+        self.assertTrue(
+            Education.objects.filter(
+                institution="Test University"
+            ).exists()
+        )
+
+    def test_update_education(self):
+        response = self.client.post(
+            reverse(
+                "main:update_education",
+                args=[self.education.id]
+            ),
+            {
+                "institution": "Universitas Indonesia",
+                "program":"S1 Ilmu Komputer",
+                "start_year": "2025",
+                "end_year": "2029",
+                "website": "https://www.ui.ac.id/",
+                "description": "Updated description.",
+            }
+        )
+
+        self.education.refresh_from_db()
+
+        self.assertEqual(
+            self.education.description,
+            "Updated description."
+        )
+
+        self.assertEqual(
+            self.education.end_year,
+            2029
+        )
+
+        self.assertRedirects(
+            response,
+            reverse(
+                "main:show_education_detail",
+                args=[self.education.id]
+            )
+        )
+
+    def test_delete_education(self):
+        response =self.client.post(
+            reverse(
+                "main:delete_education",
+                args=[self.education.id]
+            )
+        )
+
+        self.assertFalse(
+            Education.objects.filter(
+                id=self.education.id
+            ).exists()
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("main:show_education")
+        )
+
+    def test_education_json_search(self):
+        Education.objects.create(
+            institution="MAN Insan Cendekia OKI",
+            program="Science",
+            start_year="2022",
+        )
+
+        response = self.client.get(
+            reverse("main:get_education_json"),
+            {
+                "institution":"Indonesia"
+            }
+        )
+
+        data = json.loads(response.content)
+
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["fields"]["institution"], "Universitas Indonesia")
+
+
+    def test_education_page_search(self):
+        Education.objects.create(
+            institution="MAN Insan Cendekia OKI",
+            program="Science",
+            start_year=2022,
+        )
+
+        response = self.client.get(
+            reverse("main:show_education"),
+            {
+                "institution": "MAN"
+            }
+        )
+
+        institutions = [
+            education.institution
+            for education in response.context["education_list"]
+        ]
+
+        self.assertEqual(
+            institutions,
+            ["MAN Insan Cendekia OKI"]
+        )
