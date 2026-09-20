@@ -31,6 +31,7 @@ def show_experience(request):
     return render(request, "experience.html", context)
 
 def get_education_json(request):
+    """Return Education data as JSON, optionally filtered by institution."""
     institution_query = request.GET.get("institution", "").strip()
 
     educations = Education.objects.all()
@@ -54,6 +55,7 @@ def get_education_json(request):
 
 
 def show_education(request):
+    """Display Education data after retrieving and deserializing its JSON representation."""
     json_response = get_education_json(request)
 
     educations = serializers.deserialize(
@@ -99,6 +101,7 @@ def show_education_detail(request, education_id):
 
 
 def create_education(request):
+    """Create a new Education entry using EducationForm."""
     form = EducationForm(request.POST or None)
 
     if request.method == "POST" and form.is_valid():
@@ -133,6 +136,7 @@ def create_project(request):
     return render(request, "projects_form.html", context)
 
 def update_education(request, education_id):
+    """Update an existing Education entry identified by its UUID."""
     education = get_object_or_404(Education, id=education_id)
 
     form = EducationForm (
@@ -158,6 +162,7 @@ def update_education(request, education_id):
     return render(request,"education_form.html", context)
 
 def delete_education(request, education_id):
+    """Delete an Education entry through a POST request."""
     education = get_object_or_404(Education, id=education_id)
 
     if request.method == "POST":
