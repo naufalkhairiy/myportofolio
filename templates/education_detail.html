@@ -65,20 +65,8 @@
                     Edit Education
                 </a>
 
-                <form
-                    method="post"
-                    action="{% url 'main:delete_education' education.id %}"
-                    onsubmit="return confirm('Are you sure you want to delete this education?');"
-                >
-                    {% csrf_token %}
-
-                    <button 
-                        type="submit"
-                        class="button button-danger"
-                    >
-                        Delete Education
-                    </button>
-                </form>
+                {% include "components/education_delete_modal.html" with education=education %}
+                
             </div>
 
         </div>
