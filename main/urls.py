@@ -33,7 +33,7 @@ urlpatterns = [
         name="get_projects_json"
     ),
     path("projects/<uuid:project_id>/delete/",delete_project,name="delete_project"),
-    path("education/add/",create_education,name="create education"),
-    path("education/<uuid:education_id>/edit/",update_education, name="update education",),
-    path("education/<uuid:education_id>/delete/",delete_education, name="delete education",),
+    path("education/add/",create_education,name="create_education"),
+    path("education/<uuid:education_id>/edit/",update_education, name="update_education",),
+    path("education/<uuid:education_id>/delete/",delete_education, name="delete_education",),
 ]
