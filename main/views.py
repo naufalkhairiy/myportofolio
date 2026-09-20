@@ -49,12 +49,51 @@ def show_education(request):
     }
     return render(request, "education.html", context)
 
+def get_education_json(request):
+    institution_query = request.GET.get("institution", "").strip()
+
+    educations = Education.objects.all()
+
+    if institution_query:
+        educations = educations.filter(
+            institution__icontains = institution_query
+        )
+
+    educations = educations.order_by("-start__year")
+
+    education_json = serializers.serialize(
+        "json", 
+        educations
+    )
+
+    return HttpResponse(
+        education_json,
+        content_type="application/json"
+    )
+
 def show_education_detail(request, education_id):
-    education = get_object_or_404(Education, id=education_id)
+
+    json_response= get_education_json(request)
+    
+    educations = serializers.deserialize(
+        "json",
+        json_response.content.decode("utf-8")
+    )
+
+    education = [
+        education.object
+        for education in educations
+    ]
+
+    institution_query = request.Get.get(
+        "institution",
+        ""
+    ).strip()
 
     context = {
         "nickname": "Khairiy",
         "education": education,
+        "institution_query": institution_query,
     }
 
     return render(request, "education_detail.html", context)
