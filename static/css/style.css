@@ -643,3 +643,26 @@ h1, .brand {
         text-align: center;
     }
 }
+
+.education-detail-action {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+}
+
+.education-detail-action form {
+    margin: 0;
+}
+
+@media (max-width: 600px) {
+    .education-detail-action {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .education-detail-action .button {
+        width: 100%;
+        text-align: center;
+    }
+}

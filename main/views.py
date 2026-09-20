@@ -64,6 +64,8 @@ def create_education(request):
 
     return render(request, "education_forms.html", context)
 
+
+
 def create_project(request):
     form = ProjectForm(request.POST or None)
 
