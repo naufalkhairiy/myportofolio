@@ -5,10 +5,13 @@ from main.views import (
     show_experience,
     show_education,
     show_education_detail,
+    create_education,
     show_projects,
     create_project,
     get_projects_json,
     delete_project,
+    update_education,
+    delete_education,
 )
 
 app_name = "main"
@@ -30,4 +33,7 @@ urlpatterns = [
         name="get_projects_json"
     ),
     path("projects/<uuid:project_id>/delete/",delete_project,name="delete_project"),
+    path("education/add/",create_education,name="create education"),
+    path("education/<uuid:education_id>/edit/",update_education, name="update education",),
+    path("education/<uuid:education_id>/delete/",delete_education, name="delete education",),
 ]

@@ -1,6 +1,6 @@
-from django.forms import ModelForm, TextInput, Textarea, URLInput
+from django.forms import ModelForm, TextInput, Textarea, URLInput, NumberInput
 
-from main.models import Project
+from main.models import Project,  Education
 
 class ProjectForm(ModelForm):
     class Meta:
@@ -41,7 +41,7 @@ class ProjectForm(ModelForm):
             ),
             "project_url": URLInput(
                 attrs={
-                    "placeholder": "https://github.com/kakBurhan/burhanquestv4",
+                    "placeholder": "https://github.com/naufalkhairiy/myportofolio",
                 }
             ),
             "project_image_url": URLInput(
@@ -49,4 +49,46 @@ class ProjectForm(ModelForm):
                     "placeholder": "https://drive.google.com/thumbnail?id=...&sz=w1000",
                 }
             ),
+        }
+
+class EducationForm(ModelForm):
+    class Meta:
+        model = Education
+
+        fields = ["institution", "program", "start_year", "end_year", "website", "description"]
+
+        labels = {"institution" : "Institution", "program":"Program", "start_year":"Start Year", "end_year" : "End Year", "website":"Institution Website", "description": "Description"}
+
+        widgets = {
+            "institution" : TextInput(
+                attrs={
+                    "placeholder":"Universitas Indonesia",
+                }
+            ),
+            "program": TextInput(
+                attrs={
+                    "placeholder":"S1 Ilmu Komputer",
+                }
+            ),
+            "start_year": TextInput(
+                attrs={
+                    "placeholder":"2025",
+                }
+            ),
+            "end_year": TextInput(
+                attrs={
+                    "placeholder":"Leave blank if still ongoing",
+                }
+            ),
+            "website":URLInput(
+                attrs={
+                    "placeholder":"https://www.ui.ac.id/",
+                }
+            ),
+            "description": Textarea(
+                attrs={
+                    "placeholder": "Describe your education experience",
+                    "rows": 3,  
+                }
+            )
         }
