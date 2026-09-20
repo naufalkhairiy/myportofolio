@@ -31,9 +31,21 @@ def show_experience(request):
     return render(request, "experience.html", context)
 
 def show_education(request):
+    institution_query = request.GET.get("institution", "").strip()
+
+    educations = Education.objects.all()
+
+    if institution_query:
+        educations = educations.filter(
+            institution__icontains = institution_query
+        )
+
+    educations = educations.order_by("-start_year")
+
     context = {
         "nickname": "Khairiy",
-        "education_list" : Education.objects.all().order_by("-start_year")
+        "education_list" : educations,
+        "institution_query" : institution_query,
     }
     return render(request, "education.html", context)
 
@@ -62,7 +74,7 @@ def create_education(request):
         "submit_label" : "Add Education",
     }
 
-    return render(request, "education_forms.html", context)
+    return render(request, "education_form.html", context)
 
 
 
@@ -100,7 +112,7 @@ def update_education(request, education_id):
     context = {
         "nickname": "Khairiy",
         "form" : form,
-        "paget_title": "Edit Education",
+        "page_title": "Edit Education",
         "submit_label": "Save Changes",
     }
 

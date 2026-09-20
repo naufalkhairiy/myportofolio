@@ -9,8 +9,41 @@
     <section class="education">
         <div class="container">
 
-            <h1>Education</h1>
+            <div class="project-header">
 
+                <h1>Education</h1>
+
+                    <a
+                        href="{%url 'main:create_education' %}"
+                        class="button project-add-button"
+                    >
+                        <span aria-hidden="true">+</span>
+                        Add Education
+                    </a>
+
+            </div>
+
+            <form   
+                method="get"
+                action="{% url 'main:show_education' %}"
+                class="project-search"
+            >
+
+                <input
+                    type="search"
+                    name="institution"
+                    value="{{ institution_query }}"
+                    placeholder="Cari berdasarkan institusi"
+                    class="project-search__input"
+                    aria-label="Cari berdasarkan institusi"
+                >
+
+                <button type="submit" class="button">
+                    Cari
+                </button>
+
+            </form>
+                
             {% for education in education_list %}
 
                 <article class="education-item">
@@ -59,9 +92,15 @@
 
             {% empty %}
 
-                <p class="empty-state">
-                    Belum ada riwayat pendidikan yang ditambahkan.
-                </p>
+                {% if institution_query %}
+                    <p class="empty-state">
+                        Tidak ada pendidikan dengan institusi tersebut.
+                    </p>
+                {% else %}
+                    <p class="empty-state">
+                        Belum ada riwayat pendidikan yang ditambahkan.
+                    </p>
+                {% endif %}
 
             {% endfor %}
 
