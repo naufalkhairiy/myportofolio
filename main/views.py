@@ -30,25 +30,6 @@ def show_experience(request):
     }
     return render(request, "experience.html", context)
 
-def show_education(request):
-    institution_query = request.GET.get("institution", "").strip()
-
-    educations = Education.objects.all()
-
-    if institution_query:
-        educations = educations.filter(
-            institution__icontains = institution_query
-        )
-
-    educations = educations.order_by("-start_year")
-
-    context = {
-        "nickname": "Khairiy",
-        "education_list" : educations,
-        "institution_query" : institution_query,
-    }
-    return render(request, "education.html", context)
-
 def get_education_json(request):
     institution_query = request.GET.get("institution", "").strip()
 
@@ -56,13 +37,13 @@ def get_education_json(request):
 
     if institution_query:
         educations = educations.filter(
-            institution__icontains = institution_query
+            institution__icontains=institution_query
         )
 
-    educations = educations.order_by("-start__year")
+    educations = educations.order_by("-start_year")
 
     education_json = serializers.serialize(
-        "json", 
+        "json",
         educations
     )
 
@@ -71,32 +52,51 @@ def get_education_json(request):
         content_type="application/json"
     )
 
-def show_education_detail(request, education_id):
 
-    json_response= get_education_json(request)
-    
+def show_education(request):
+    json_response = get_education_json(request)
+
     educations = serializers.deserialize(
         "json",
         json_response.content.decode("utf-8")
     )
 
-    education = [
+    educations = [
         education.object
         for education in educations
     ]
 
-    institution_query = request.Get.get(
+    institution_query = request.GET.get(
         "institution",
         ""
     ).strip()
 
     context = {
         "nickname": "Khairiy",
-        "education": education,
+        "education_list": educations,
         "institution_query": institution_query,
     }
 
-    return render(request, "education_detail.html", context)
+    return render(request, "education.html", context)
+
+
+def show_education_detail(request, education_id):
+    education = get_object_or_404(
+        Education,
+        id=education_id
+    )
+
+    context = {
+        "nickname": "Khairiy",
+        "education": education,
+    }
+
+    return render(
+        request,
+        "education_detail.html",
+        context
+    )
+
 
 def create_education(request):
     form = EducationForm(request.POST or None)
