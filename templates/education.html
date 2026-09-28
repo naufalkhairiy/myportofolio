@@ -13,21 +13,58 @@
 
                 <h1>Education</h1>
 
-                    <a
-                        href="{%url 'main:create_education' %}"
-                        class="button project-add-button"
-                    >
-                        <span aria-hidden="true">+</span>
-                        Add Education
-                    </a>
+                    {% if user.is_superuser %}
+                        <a href="{% url 'main:create_education' %}"
+                            class="button project-add-button">
+                            <span aria-hidden="true">+</span>
+                            Add Education
+                        </a>
+                    {% endif %}
 
             </div>
 
-            <form   
+            <form
                 method="get"
                 action="{% url 'main:show_education' %}"
                 class="project-search"
-            >
+>
+                <input
+                    type="search"
+                    name="institution"
+                    value="{{ institution_query }}"
+                    placeholder="Cari berdasarkan institusi"
+                    class="project-search__input"
+                    aria-label="Cari berdasarkan institusi"
+                >
+
+                <label for="education-sort">
+                    Urutkan:
+                </label>
+
+                <select
+                    id="education-sort"
+                    name="sort"
+                >
+
+                    <option
+                        value=""
+                        {% if sort != "stars" %}selected{% endif %}
+                    >
+                        Tahun terbaru
+                    </option>
+
+                    <option
+                        value="stars"
+                        {% if sort == "stars" %}selected{% endif %}
+                    >
+                        Star terbanyak
+                    </option>
+                </select>
+
+                <button type="submit" class="button">
+                    Cari
+                </button>
+            </form>
 
                 <input
                     type="search"
@@ -38,11 +75,12 @@
                     aria-label="Cari berdasarkan institusi"
                 >
 
+
                 <button type="submit" class="button">
                     Cari
                 </button>
 
-            </form>
+            </>
                 
             {% for education in education_list %}
 
@@ -88,6 +126,28 @@
                         View Details
                     </a>
 
+
+                    <p>Star: {{ education.star_count }}</p>
+
+                    {% if user.is_authenticated %}
+                        <form method="post"
+                                action="{% url 'main:toggle_education_star' education.id %}">
+                            {% csrf_token %}
+                            <button type="submit"
+                                    class="button"
+                                    aria-pressed="{{ education.is_starred|yesno:'true,false' }}">
+                                {% if education.is_starred %}
+                                    Unstar
+                                {% else %}
+                                    Star
+                                {% endif %}
+                            </button>
+                        </form>
+                    {% else %}
+                        <a href="{% url 'main:login' %}" class="education-action-link">
+                            Login untuk memberi star
+                        </a>
+                    {% endif %}
                 </article>
 
             {% empty %}

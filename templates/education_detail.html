@@ -57,16 +57,16 @@
             {% endif %}
 
             <div class="education-detail-actions">
+                {% if can_edit_education %}
+                    <a href="{% url 'main:update_education' education.id %}"
+                        class="button">
+                        Edit Education
+                    </a>
+                {% endif %}
 
-                <a
-                    href="{% url 'main:update_education' education.id %}"
-                    class="button"
-                >
-                    Edit Education
-                </a>
-
-                {% include "components/education_delete_modal.html" with education=education %}
-                
+                {% if user.is_superuser %}
+                    {% include "components/education_delete_modal.html" with education=education %}
+                {% endif %}
             </div>
 
         </div>
