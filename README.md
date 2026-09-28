@@ -633,3 +633,436 @@ Berikut beberapa contoh prompt yang saya gunakan selama Tutorial 3 dan Tugas 3:
 - "Bantu saya menulis refleksi Tugas 3 berdasarkan implementasi serta error yang benar-benar saya alami, bukan jawaban generik."
 
 - "Bantu saya menjelaskan keterbatasan penggunaan AI selama debugging dan contoh bagian yang tetap harus saya koreksi serta verifikasi secara manual."
+
+## Week 4 Documentation
+
+Bagian ini mendokumentasikan implementasi Tutorial 4 dan Tugas 4 tanpa menggantikan dokumentasi dari minggu sebelumnya. Fokus pengembangan pada minggu ini adalah autentikasi, session, cookie, otorisasi berbasis peran, serta fitur Star pada data Education.
+
+### Tutorial 4 - Implementasi Autentikasi, Session, dan Cookie
+
+Pada Tutorial 4, saya mengimplementasikan autentikasi menggunakan sistem autentikasi bawaan Django. Model akun menggunakan `User` dari `django.contrib.auth`, sehingga saya tidak membuat model pengguna baru.
+
+Fitur autentikasi yang diimplementasikan meliputi:
+
+- Membuat halaman registrasi menggunakan `UserCreationForm`.
+- Membuat halaman login menggunakan `AuthenticationForm`.
+- Menggunakan fungsi `login()` untuk menyimpan status autentikasi pengguna pada session.
+- Menggunakan fungsi `logout()` untuk menghapus session pengguna.
+- Menambahkan URL `/register/`, `/login/`, dan `/logout/`.
+- Menambahkan template `register.html` dan `login.html`.
+- Menampilkan pesan kesalahan ketika data registrasi atau kredensial login tidak valid.
+- Menampilkan pesan keberhasilan setelah akun berhasil dibuat.
+- Menampilkan username pengguna yang sedang login pada navigation bar.
+- Menampilkan tombol Login dan Register untuk pengunjung yang belum login.
+- Menampilkan tombol Logout untuk pengguna yang sudah login.
+- Mempertahankan halaman profil, Experience, Projects, dan Education agar tetap dapat dibaca tanpa login.
+
+Django menyimpan identitas pengguna yang sudah login menggunakan session. Browser menyimpan session key melalui cookie `sessionid`, sedangkan data session sebenarnya disimpan dan dikelola oleh server. Pada setiap request berikutnya, Django menggunakan session tersebut untuk menentukan nilai `request.user`.
+
+Saya juga menggunakan cookie `last_login` untuk menyimpan waktu login terakhir. Cookie tersebut dibuat menggunakan `response.set_cookie()` setelah proses login berhasil dan dihapus menggunakan `response.delete_cookie()` ketika pengguna melakukan logout.
+
+Implementasi cookie tersebut memungkinkan halaman utama menampilkan informasi sesi login terakhir. Cookie `last_login` hanya digunakan untuk informasi tampilan dan bukan sebagai bukti autentikasi. Status autentikasi tetap ditentukan oleh sistem session Django.
+
+Form yang mengubah data menggunakan metode POST dan menyertakan `{% csrf_token %}`. Token tersebut digunakan oleh Django untuk melindungi aplikasi dari Cross-Site Request Forgery. Request POST yang tidak membawa token CSRF yang valid akan ditolak sebelum mencapai logika perubahan data pada view.
+
+Pada bagian otorisasi Tutorial 4, tindakan Create dan Delete Project dibatasi kepada pemilik portofolio atau superuser. Pembatasan tersebut tidak hanya dilakukan dengan menyembunyikan tombol pada template, tetapi juga diperiksa kembali pada sisi server menggunakan `request.user.is_superuser`.
+
+Pengunjung tanpa login akan diarahkan menuju halaman login ketika mencoba mengakses tindakan yang memerlukan akun. Pengguna yang sudah login tetapi tidak memiliki hak akses akan menerima HTTP `403 Forbidden`.
+
+Tutorial 4 juga menambahkan fitur Star pada Project menggunakan relasi `ManyToManyField` antara model `Project` dan model `User`. Relasi many-to-many digunakan karena satu Project dapat diberikan Star oleh banyak pengguna dan satu pengguna dapat memberikan Star pada banyak Project.
+
+Fitur Star menggunakan form POST dengan CSRF token. Pengguna yang sudah memberikan Star dapat membatalkannya menggunakan tombol yang sama. Relasi many-to-many memastikan bahwa satu pengguna tidak menghasilkan Star ganda pada Project yang sama.
+
+Endpoint JSON Project diperiksa kembali setelah penambahan relasi pengguna. Pemeriksaan tersebut diperlukan karena perubahan model dapat ikut mengubah data yang dipublikasikan oleh serializer. Informasi internal atau sensitif tidak boleh keluar melalui endpoint publik tanpa sengaja.
+
+### Tugas 4 - Authentication, Session, and Cookies Implementation
+
+Pada Tugas 4, pola autentikasi dan otorisasi dari Tutorial 4 diterapkan pada bagian Education yang dikembangkan pada Tugas 3.
+
+Halaman daftar dan detail Education tetap dapat dibaca oleh semua pengunjung. Tindakan yang mengubah data dibatasi berdasarkan empat peran berikut:
+
+| Peran | Membaca | Create | Update | Delete | Star/Unstar |
+|---|---:|---:|---:|---:|---:|
+| Pengunjung tanpa login | Ya | Harus login | Harus login | Harus login | Harus login |
+| Pengguna biasa | Ya | Tidak | Tidak | Tidak | Ya |
+| Editor | Ya | Tidak | Ya | Tidak | Ya |
+| Pemilik portofolio atau superuser | Ya | Ya | Ya | Ya | Ya |
+
+#### Peran Editor
+
+Peran Editor dibuat menggunakan Django Group dengan nama `Editor`. Group tersebut dibuat melalui Django Admin, kemudian akun yang dipilih dimasukkan ke dalam Group tersebut.
+
+Akun Editor tetap merupakan pengguna biasa dan tidak perlu memperoleh `Staff status` atau `Superuser status`. Keanggotaan Editor diperiksa menggunakan:
+
+`request.user.groups.filter(name="Editor").exists()`
+
+Saya membuat helper `can_edit_education()` untuk memisahkan pemeriksaan hak Update Education dari isi view. Helper tersebut mengembalikan nilai benar apabila pengguna merupakan superuser atau anggota Group Editor.
+
+Pemisahan tersebut mengurangi pengulangan logika pemeriksaan role dan membuat maksud kode lebih mudah dibaca. Superuser dan Editor dapat menggunakan fungsi Update yang sama, sedangkan Create dan Delete tetap hanya dapat dilakukan oleh superuser.
+
+#### Pembatasan Akses pada Sisi Server
+
+Setiap view yang membutuhkan akun menggunakan `@login_required`. Dengan demikian, pengunjung tanpa login diarahkan ke halaman Login.
+
+Setelah pengguna berhasil login, view kembali memeriksa role pengguna. Jika pengguna sudah login tetapi tidak mempunyai izin untuk tindakan tersebut, view menghasilkan `PermissionDenied` yang dikembalikan Django sebagai HTTP `403 Forbidden`.
+
+Pembatasan akses pada sisi server penting karena menyembunyikan tombol pada template saja tidak cukup. Pengguna masih dapat mencoba membuka URL secara langsung atau mengirim request secara manual meskipun tombol tidak terlihat.
+
+Aturan yang diterapkan adalah:
+
+- `create_education` hanya dapat digunakan oleh superuser.
+- `update_education` dapat digunakan oleh superuser dan anggota Group Editor.
+- `delete_education` hanya dapat digunakan oleh superuser.
+- `toggle_education_star` dapat digunakan oleh seluruh pengguna yang sudah login.
+- Halaman daftar Education, detail Education, dan endpoint JSON tetap dapat dibaca tanpa login.
+
+#### Pembatasan Kontrol pada Template
+
+Selain pemeriksaan pada server, tombol pada template ditampilkan sesuai role pengguna.
+
+- Tombol Add Education hanya ditampilkan kepada superuser.
+- Tombol Edit Education ditampilkan kepada superuser dan Editor.
+- Tombol Delete Education hanya ditampilkan kepada superuser.
+- Tombol Star atau Unstar ditampilkan kepada pengguna yang sudah login.
+- Pengunjung tanpa login melihat tautan menuju halaman Login untuk memberikan Star.
+
+Pemeriksaan template bertujuan memberikan antarmuka yang sesuai dengan hak pengguna. Pemeriksaan ini meningkatkan pengalaman pengguna, tetapi tidak menggantikan pemeriksaan keamanan pada view.
+
+#### Star dan Unstar Education
+
+Model `Education` ditambahkan field berikut:
+
+`starred_by = models.ManyToManyField(User, related_name="starred_educations", blank=True)`
+
+Relasi tersebut menyimpan akun pengguna yang memberikan Star pada setiap Education. Setelah perubahan model, migration dibuat dan diterapkan ke database menggunakan:
+
+```bash
+python manage.py makemigrations main
+python manage.py migrate
+```
+
+View `toggle_education_star` hanya menerima pengguna yang sudah login. Perubahan Star dilakukan menggunakan request POST dan dilindungi oleh CSRF token.
+
+Apabila pengguna belum memberikan Star, akun tersebut ditambahkan ke `starred_by`. Apabila pengguna sudah memberikan Star, akun tersebut dihapus dari relasi.
+
+`ManyToManyField` mencegah relasi pengguna dan Education yang sama tersimpan lebih dari satu kali. Dengan demikian, satu pengguna hanya dapat mempunyai maksimal satu Star pada setiap Education.
+
+Halaman Education menampilkan:
+
+- Jumlah total Star pada setiap Education.
+- Status apakah pengguna yang sedang login sudah memberikan Star.
+- Tombol Star jika pengguna belum memberikan Star.
+- Tombol Unstar jika pengguna sudah memberikan Star.
+- Tautan Login bagi pengunjung tanpa akun.
+
+#### Sortir Berdasarkan Jumlah Star
+
+Sebagai fitur tambahan yang relevan dengan Tugas 4, saya menambahkan pilihan pengurutan Education berdasarkan jumlah Star terbanyak.
+
+Pengguna dapat memilih antara:
+
+- Tahun terbaru.
+- Star terbanyak.
+
+Ketika parameter `sort=stars` diberikan, QuerySet Education menggunakan `Count("starred_by")` untuk menghitung jumlah Star dan mengurutkan data dari jumlah terbesar.
+
+Fitur ini merupakan peningkatan interaktivitas dan UX karena data Star tidak hanya ditampilkan sebagai angka, tetapi juga dapat digunakan untuk mengatur urutan Education.
+
+Jika dua Education mempunyai jumlah Star yang sama, pengurutan berikutnya menggunakan tahun mulai, nama institusi, dan UUID agar hasil pengurutan tetap konsisten.
+
+#### Integritas Endpoint JSON
+
+Endpoint `/api/education/` tetap digunakan untuk menyediakan data Education dalam format JSON.
+
+Setelah field `starred_by` ditambahkan, serializer dibatasi menggunakan parameter `fields`. Field yang dipublikasikan hanya:
+
+- `institution`
+- `program`
+- `start_year`
+- `end_year`
+- `website`
+- `description`
+
+Relasi `starred_by` tidak disertakan dalam endpoint JSON Education. Dengan demikian, identifier internal pengguna yang memberikan Star tidak terekspos melalui endpoint publik.
+
+Endpoint JSON Project juga diperbaiki agar hanya mengirimkan field Project yang memang diperlukan. Perubahan tersebut sekaligus memperbaiki typo dan masalah indentasi pada variabel `projects_json`.
+
+Saya sempat menempatkan pembuatan `projects_json` di dalam kondisi pencarian `if title_query`. Akibatnya, ketika endpoint dibuka tanpa query pencarian, variabel tersebut belum dibuat dan Django menghasilkan `UnboundLocalError`.
+
+Masalah tersebut diperbaiki dengan meletakkan proses serialization setelah blok filtering. Dengan susunan tersebut, `projects_json` selalu dibuat baik ketika terdapat pencarian maupun ketika endpoint dibuka tanpa query.
+
+#### Efisiensi Pengambilan Data Star
+
+Halaman Education melakukan deserialisasi JSON sebelum data diberikan kepada template, mengikuti pola dari Tugas 3.
+
+Untuk menghindari query terpisah pada setiap kartu Education, relasi `starred_by` dimuat menggunakan `prefetch_related_objects()`. Jumlah Star dan status pengguna kemudian dihitung dari data relasi yang sudah dimuat.
+
+Pendekatan tersebut menghindari pola query berulang untuk setiap object Education dan membuat pemisahan antara pengambilan data, penghitungan Star, serta rendering template menjadi lebih jelas.
+
+#### Pengujian
+
+Saya menambahkan pengujian untuk memeriksa perilaku empat peran pengguna.
+
+Skenario yang diuji meliputi:
+
+- Halaman daftar Education dapat dibaca tanpa login.
+- Halaman detail Education dapat dibaca tanpa login.
+- Endpoint JSON Education dapat dibaca tanpa login.
+- Pengunjung tanpa login diarahkan ke halaman Login ketika mencoba melakukan tindakan yang memerlukan akun.
+- Pengguna biasa memperoleh HTTP 403 ketika mencoba Create, Update, atau Delete Education.
+- Editor dapat melakukan Update Education.
+- Editor memperoleh HTTP 403 ketika mencoba Create atau Delete Education.
+- Superuser dapat melakukan Create, Update, dan Delete Education.
+- Tombol Add, Edit, dan Delete hanya ditampilkan kepada role yang sesuai.
+- Seluruh pengguna yang sudah login dapat memberikan dan membatalkan Star.
+- Request GET tidak dapat digunakan untuk mengubah Star.
+- Request Star tanpa CSRF token ditolak.
+- Satu pengguna tidak dapat menghasilkan Star ganda.
+- Request GET tidak dapat digunakan untuk menghapus Education.
+- Endpoint JSON Education tidak mengekspos field `starred_by`.
+- Endpoint JSON Project tetap dapat digunakan.
+- Education dapat diurutkan berdasarkan jumlah Star.
+
+Perintah pemeriksaan yang digunakan adalah:
+
+```bash
+python manage.py check
+python manage.py test main
+```
+
+`python manage.py check` berhasil dijalankan tanpa menemukan issue.
+
+Unit test menemukan dua masalah nyata pada implementasi awal:
+
+1. View `update_education` belum memiliki `@login_required`. Akibatnya, pengunjung tanpa login menerima HTTP 403 dari pemeriksaan role, bukan redirect menuju Login.
+2. Variabel `projects_json` hanya dibuat di dalam blok `if title_query`. Akibatnya, endpoint Project tanpa parameter pencarian menghasilkan `UnboundLocalError`.
+
+Kedua masalah tersebut diperbaiki berdasarkan traceback dan hasil pengujian. Setelah memperbaiki source code, seluruh pengujian perlu dijalankan kembali sebelum commit akhir agar hasil aktual pada repository dapat diverifikasi.
+
+#### Git dan Branching
+
+Pengembangan Tugas 4 dilakukan menggunakan branch:
+
+`feature/tugas-4-education`
+
+Perubahan dipisahkan menggunakan conventional commit agar riwayat Git mencerminkan tujuan setiap perubahan. Contoh commit yang digunakan antara lain:
+
+- `feat: add education star relationship`
+- `feat: enforce education roles and add star sorting`
+- `test: cover education roles stars and public JSON`
+- `fix: correct project JSON and education authorization`
+- `docs: document tutorial and assignment 4`
+
+Sebelum dikumpulkan, commit akhir harus di-push ke GitHub. Tautan yang dikumpulkan melalui SCELE harus berupa tautan menuju commit, bukan hanya tautan repository.
+
+Format tautan commit:
+
+`https://github.com/naufalkhairiy/myportofolio/commit/<commit-hash>`
+
+Repository harus dapat dibuka secara publik. Tautan commit dapat diperiksa melalui Incognito atau Private Browsing sebelum dikumpulkan.
+
+### Setup Tambahan Tutorial 4 dan Tugas 4
+
+Setelah mengikuti langkah setup umum pada bagian sebelumnya, jalankan migration:
+
+```bash
+python manage.py migrate
+```
+
+Jika belum mempunyai superuser lokal, buat menggunakan:
+
+```bash
+python manage.py createsuperuser
+```
+
+Jalankan server:
+
+```bash
+python manage.py runserver
+```
+
+Buka Django Admin melalui:
+
+```text
+http://127.0.0.1:8000/admin/
+```
+
+Login menggunakan akun superuser, kemudian lakukan langkah berikut:
+
+1. Buka bagian `Groups`.
+2. Klik `Add`.
+3. Isi Name dengan `Editor`.
+4. Permissions dapat dibiarkan kosong karena implementasi memeriksa keanggotaan Group.
+5. Simpan Group.
+6. Buka bagian `Users`.
+7. Pilih akun biasa yang akan dijadikan Editor.
+8. Masukkan akun tersebut ke Group `Editor`.
+9. Jangan memberikan `Staff status` atau `Superuser status` kepada akun Editor.
+10. Simpan perubahan pengguna.
+
+Untuk melakukan pengujian manual, siapkan:
+
+- Satu akun pengguna biasa.
+- Satu akun pengguna biasa yang dimasukkan ke Group Editor.
+- Satu akun superuser sebagai pemilik portofolio.
+- Satu sesi browser tanpa login.
+
+Lakukan pemeriksaan berikut:
+
+| Kondisi | Hasil yang diharapkan |
+|---|---|
+| Pengunjung membuka daftar dan detail Education | Halaman dapat dibaca |
+| Pengunjung menekan tindakan yang memerlukan akun | Diarahkan ke Login |
+| Pengguna biasa memberi Star | Star berhasil ditambahkan |
+| Pengguna biasa membatalkan Star | Star berhasil dihapus |
+| Pengguna biasa membuka Create, Update, atau Delete | HTTP 403 |
+| Editor membuka Update Education | Form dapat dibuka dan disimpan |
+| Editor membuka Create atau Delete Education | HTTP 403 |
+| Superuser membuka Create, Update, dan Delete | Semua tindakan tersedia |
+| Pengguna memilih Star terbanyak | Education diurutkan berdasarkan jumlah Star |
+| Pengguna membuka `/api/education/` | JSON tampil tanpa `starred_by` |
+| Pengguna membuka `/api/projects/` | JSON Project tampil tanpa error |
+| Pengguna logout | Session berakhir dan cookie `last_login` dihapus |
+
+### Refleksi Tugas 4
+
+Halaman resmi Individual Assignment 4 menyatakan bahwa pertanyaan reflektif untuk pekan ini dihilangkan. Karena itu, tidak ada pertanyaan reflektif Tugas 4 yang harus dijawab.
+
+Sebagai catatan pembelajaran, implementasi minggu ini membantu saya memahami perbedaan autentikasi dan otorisasi.
+
+Autentikasi menentukan siapa pengguna yang sedang mengakses aplikasi. Proses ini dilakukan melalui registrasi, login, logout, session, dan `request.user`.
+
+Otorisasi menentukan tindakan apa yang boleh dilakukan oleh pengguna yang sudah dikenali. Pada implementasi Education, pengguna biasa, Editor, dan superuser merupakan akun yang sama-sama dapat terautentikasi, tetapi mempunyai hak Create, Update, dan Delete yang berbeda.
+
+Saya juga memahami bahwa menyembunyikan tombol pada template bukan merupakan perlindungan keamanan yang cukup. Pemeriksaan hak akses harus tetap diterapkan pada view karena URL dapat dibuka secara langsung atau dipanggil melalui request manual.
+
+Penggunaan test membantu menemukan perbedaan perilaku yang sulit terlihat melalui browser. Salah satu contohnya adalah perbedaan antara redirect HTTP 302 untuk pengunjung tanpa login dan HTTP 403 untuk pengguna yang sudah login tetapi tidak mempunyai izin.
+
+## AI Usage Disclosure - Week 4
+
+Pada Tutorial 4 dan Tugas 4, saya menggunakan ChatGPT dan Codex untuk membantu membaca requirement resmi, meninjau source code project, merencanakan perubahan minimum, memahami autentikasi serta otorisasi Django, menyusun unit test, membaca traceback, dan memperbarui dokumentasi.
+
+Saya memberikan source code project dalam bentuk ZIP agar saran dapat disesuaikan dengan nama model, fungsi view, template, dan URL yang benar-benar digunakan oleh project. Hal ini dilakukan untuk mengurangi kemungkinan solusi generik yang tidak sesuai dengan struktur aplikasi.
+
+Saya meminta AI memprioritaskan requirement utama berikut:
+
+- Registrasi, login, dan logout.
+- Session dan cookie `last_login`.
+- Pembatasan Create, Update, dan Delete berdasarkan role.
+- Peran Editor menggunakan Django Group.
+- Fitur Star dan Unstar pada Education.
+- Perlindungan POST menggunakan CSRF token.
+- Integritas endpoint JSON.
+- Unit test untuk empat role pengguna.
+- README dan AI disclosure.
+- Pengumpulan menggunakan tautan commit GitHub.
+
+AI juga digunakan untuk membandingkan implementasi dengan halaman resmi Tutorial 4 dan Tugas 4. Dari pemeriksaan tersebut diketahui bahwa Tugas 4 tidak mempunyai pertanyaan reflektif karena pertanyaan reflektif untuk pekan ini secara eksplisit dihilangkan.
+
+### Strategi Penggunaan AI
+
+Saya menggunakan strategi prompting berbasis konteks. Daripada hanya meminta “buatkan Tugas 4”, saya memberikan requirement resmi, source code yang sudah ada, traceback, serta batasan bahwa perubahan harus sesederhana mungkin dan tidak menambahkan fitur yang tidak diperlukan.
+
+Saya juga meminta perubahan dijelaskan berdasarkan lokasi file agar dapat diterapkan secara bertahap. Ketika instruksi penempatan kode masih terlalu umum dan membingungkan, saya meminta ulang dalam bentuk blok lengkap yang dapat menggantikan satu fungsi atau satu file.
+
+Setelah menerima saran, saya tetap menjalankan:
+
+```bash
+python manage.py check
+python manage.py test main
+```
+
+Saya menggunakan traceback sebagai sumber bukti untuk menentukan akar masalah. Saya tidak menganggap kode benar hanya karena dapat disalin atau karena tidak menghasilkan syntax error.
+
+### Bagian yang Dibantu AI
+
+AI membantu pada bagian berikut:
+
+- Membaca requirement resmi Tutorial 4 dan Tugas 4.
+- Membandingkan requirement dengan isi project.
+- Menentukan penggunaan Django Group untuk role Editor.
+- Menyusun helper `can_edit_education()`.
+- Menentukan penggunaan `@login_required` dan `PermissionDenied`.
+- Membatasi tombol berdasarkan role pada template.
+- Menambahkan `ManyToManyField` untuk Star Education.
+- Membuat view Star dan Unstar berbasis POST.
+- Menampilkan jumlah Star dan status pengguna.
+- Menambahkan pengurutan berdasarkan jumlah Star.
+- Membatasi field yang keluar melalui serializer JSON.
+- Menyusun unit test authorization, Star, CSRF, API, dan template.
+- Membaca hasil test dan traceback.
+- Menentukan perbaikan terhadap decorator yang hilang.
+- Menentukan perbaikan terhadap indentasi `projects_json`.
+- Menyusun dokumentasi Week 4.
+
+### Keterbatasan dan Koreksi terhadap AI
+
+Penggunaan AI pada Week 4 menunjukkan bahwa jawaban yang terlihat lengkap belum tentu langsung dapat diterapkan tanpa pemeriksaan.
+
+Pada instruksi awal, lokasi penempatan beberapa potongan kode masih terlalu umum. Contohnya, instruksi “tambahkan di dalam form pencarian sebelum tombol Cari” dapat membingungkan ketika pengguna harus menentukan batas awal dan akhir form. Instruksi kemudian diperbaiki dengan memberikan satu blok form lengkap untuk menggantikan blok lama.
+
+Masalah lain terjadi pada fungsi `get_projects_json`. Potongan kode serialization sempat ditempatkan dengan indentasi yang salah sehingga hanya berjalan ketika `title_query` tersedia. Unit test kemudian menemukan `UnboundLocalError` ketika endpoint dibuka tanpa pencarian.
+
+Decorator `@login_required` juga sempat belum terpasang pada `update_education`. Akibatnya, pengunjung tanpa login menerima HTTP 403 dari helper role, sedangkan requirement mengharuskan pengunjung diarahkan ke halaman Login. Kesalahan tersebut ditemukan melalui perbandingan response 403 dan response 302 pada unit test.
+
+Instruksi pembuatan Editor juga sempat menimbulkan kebingungan karena halaman Django Admin menampilkan daftar Permissions. Setelah diperiksa kembali, Editor bukan permission bawaan yang akan muncul pada daftar tersebut. Editor merupakan nama Group baru yang harus dibuat melalui menu Groups, sedangkan daftar Permissions dapat dibiarkan kosong karena source code memeriksa nama Group secara langsung.
+
+Contoh-contoh tersebut menunjukkan bahwa AI dapat membantu mempercepat penelusuran masalah, tetapi AI masih dapat menghasilkan instruksi yang kurang jelas, salah indentasi, atau tidak sepenuhnya sesuai dengan state source code terbaru.
+
+Karena itu, saya melakukan perbaikan manual dengan:
+
+- Membandingkan saran dengan source code project.
+- Memeriksa posisi decorator dan indentasi.
+- Menjalankan Django system check.
+- Menjalankan unit test.
+- Membaca traceback sampai ke nama fungsi dan nomor baris.
+- Menguji role melalui akun berbeda.
+- Memeriksa endpoint JSON melalui browser.
+- Memeriksa `git diff` sebelum commit.
+- Tidak memasukkan password, cookie, atau credential ke repository.
+
+### AI Prompting Log - Week 4
+
+Berikut beberapa contoh prompt dan permintaan yang digunakan selama Tutorial 4 dan Tugas 4:
+
+- "Baca requirement resmi Tugas 4 dan audit ZIP project saya berdasarkan source code yang benar-benar ada."
+
+- "Targetkan indikator nilai 4, tetapi gunakan implementasi minimum dan jangan menambahkan fitur yang tidak diperlukan."
+
+- "Prioritaskan role Editor, authorization Education, Star Education, unit test, README, dan pengumpulan."
+
+- "Pertahankan alur serialization dan deserialization JSON dari Tugas 3."
+
+- "Pastikan endpoint JSON tetap berfungsi dan tidak membocorkan informasi sensitif."
+
+- "Jelaskan file mana yang harus dibuka dan lokasi pasti untuk menempatkan kode."
+
+- "Berikan satu blok form lengkap untuk menggantikan form lama agar saya tidak salah menempatkan pilihan sortir."
+
+- "Kenapa Editor tidak muncul pada daftar Permissions di Django Admin?"
+
+- "Jelaskan langkah membuat Group Editor dan memasukkan akun ke Group tersebut."
+
+- "Baca traceback `UnboundLocalError: cannot access local variable 'projects_json'` dan tunjukkan akar masalahnya."
+
+- "Kenapa test mengharapkan redirect 302 tetapi view menghasilkan HTTP 403?"
+
+- "Buatkan isi `main/views.py` lengkap agar seluruh fungsi dapat disalin tanpa salah indentasi."
+
+- "Tambahkan test untuk pengunjung, pengguna biasa, Editor, dan superuser."
+
+- "Tambahkan test bahwa satu pengguna tidak menghasilkan Star ganda."
+
+- "Tambahkan test bahwa request GET tidak dapat menghapus Education atau mengubah Star."
+
+- "Tambahkan test CSRF untuk endpoint Star."
+
+- "Tambahkan test agar endpoint JSON Education tidak mengeluarkan `starred_by`."
+
+- "Tambahkan fitur ekstra yang sederhana dan relevan untuk indikator nilai 4."
+
+- "Gunakan sortir berdasarkan jumlah Star sebagai peningkatan UX tanpa membuat fitur yang terlalu kompleks."
+
+- "Perbarui README tanpa menghapus atau meringkas dokumentasi Week 1 sampai Week 3."
+
+- "Cari halaman resmi PBP terlebih dahulu dan jangan mengarang pertanyaan reflektif yang tidak tersedia."
