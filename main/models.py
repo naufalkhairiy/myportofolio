@@ -35,6 +35,7 @@ class Education(models.Model):
     end_year = models.PositiveBigIntegerField(blank=True, null = True)
     website = models.URLField(blank=True)
     description = models.TextField(blank=True)
+    starred_by = models.ManyToManyField(User, related_name="starred_educations", blank=True)
 
 
     def __str__(self):

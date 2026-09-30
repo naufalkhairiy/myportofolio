@@ -7,7 +7,7 @@ from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.core import serializers
 from django.core.exceptions import PermissionDenied
 from django.db.models import Count, prefetch_related_objects
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
@@ -283,49 +283,43 @@ def toggle_education_star(request, education_id):
 def get_projects_json(request):
     """Mengirim field Project yang aman melalui endpoint JSON."""
     title_query = request.GET.get("title", "").strip()
-    projects = Project.objects.all()
+    projects = Project.objects.prefetch_related('starred_by').all()
 
     if title_query:
         projects = projects.filter(
             title__icontains=title_query
         )
 
-    projects_json = serializers.serialize(
-        "json",
-        projects,
-        fields=(
-            "title",
-            "description",
-            "tech_stack",
-            "project_url",
-            "project_image_url",
-        ),
-    )
+    data = []
+    for project in projects:
+        starred_users = project.starred_by.all()
+        is_starred = request.user in starred_users if request.user.is_authenticated else False
+        starred_by_names = ", ".join([u.username for u in starred_users])
 
-    return HttpResponse(
-        projects_json,
-        content_type="application/json",
-    )
+        data.append({
+            "pk": str(project.id),
+            'fields': {
+                        "title" : project.title,
+                        "description" : project.description,
+                        "tech_stack" : project.tech_stack,
+                        "project_url" : project.project_url,
+                        "project_image_url" : project.project_image_url,
+                        "star_count": starred_users.count(),
+                        "is_starred": is_starred,
+                        "starred_by_names" : starred_by_names,
+            }
+        })
+    
+    return JsonResponse(data, safe=False)
 
 
 def show_projects(request):
-    json_response = get_projects_json(request)
-
-    projects = [
-        item.object
-        for item in serializers.deserialize(
-            "json",
-            json_response.content.decode("utf-8"),
-        )
-    ]
+    title_query = request.GET.get("title", "").strip()
 
     context = {
         "nickname": "Khairiy",
-        "project_list": projects,
-        "title_query": request.GET.get(
-            "title",
-            "",
-        ).strip(),
+        "title_query": title_query,
+        "form": ProjectForm(),
     }
 
     return render(
@@ -465,3 +459,21 @@ def logout_user(request):
     response.delete_cookie("last_login")
 
     return response
+
+@require_POST
+def create_project_ajax(request):
+    if not request.user.is_superuser:
+        return JsonResponse(
+            {"message": "Hanya pemilik portofolio yang dapat menambahkan proyek."},
+            status=403,
+        )
+
+    form = ProjectForm(request.POST)
+    if form.is_valid():
+        project = form.save()
+        return JsonResponse(
+            {"message": "Proyek berhasil ditambahkan.", "pk": str(project.id)},
+            status=201,
+        )
+
+    return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
