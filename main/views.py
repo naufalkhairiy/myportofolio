@@ -4,10 +4,9 @@ from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
-from django.core import serializers
 from django.core.exceptions import PermissionDenied
-from django.db.models import Count, prefetch_related_objects
-from django.http import HttpResponse, JsonResponse
+from django.db.models import Count
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
@@ -56,7 +55,7 @@ def show_experience(request):
 def get_education_json(request):
     """Mengirim field Education yang aman melalui endpoint JSON."""
     institution_query = request.GET.get("institution", "").strip()
-    educations = Education.objects.all()
+    educations = Education.objects.prefetch_related("starred_by")
 
     if institution_query:
         educations = educations.filter(
@@ -79,56 +78,43 @@ def get_education_json(request):
             "id",
         )
 
-    education_json = serializers.serialize(
-        "json",
-        educations,
-        fields=(
-            "institution",
-            "program",
-            "start_year",
-            "end_year",
-            "website",
-            "description",
-        ),
-    )
+    data = []
 
-    return HttpResponse(
-        education_json,
-        content_type="application/json",
-    )
+    for education in educations:
+        starred_users =  education.starred_by.all()
+
+        is_starred = (
+            request.user in starred_users
+            if request.user.is_authenticated
+            else False
+        )
+
+        data.append({
+            "pk": str(education.id),
+            "fields": {
+                "institution" : education.institution,
+                "program" : education. program,
+                "start_year": education.start_year,
+                "end_year": education.end_year,
+                "website" : education.website,
+                "description" : education.description,
+                "star_count": starred_users.count(),
+                "is_starred": is_starred,
+            },
+        })
+    return JsonResponse(data, safe=False)
 
 
 def show_education(request):
-    """Menampilkan Education dari hasil serialization JSON."""
-    json_response = get_education_json(request)
+    """Menampilkan halaman Education; data daftar dimuat melalui AJAX."""
+    institution_query = request.GET.get("institution", "",).strip()
 
-    educations = [
-        item.object
-        for item in serializers.deserialize(
-            "json",
-            json_response.content.decode("utf-8"),
-        )
-    ]
-
-    prefetch_related_objects(educations, "starred_by")
-
-    for education in educations:
-        users_who_starred = list(education.starred_by.all())
-
-        education.star_count = len(users_who_starred)
-        education.is_starred = any(
-            user.pk == request.user.pk
-            for user in users_who_starred
-        )
 
     context = {
         "nickname": "Khairiy",
-        "education_list": educations,
-        "institution_query": request.GET.get(
-            "institution",
-            "",
-        ).strip(),
+        "institution_query": institution_query,
         "sort": request.GET.get("sort", ""),
+        "form" : EducationForm(),
     }
 
     return render(request, "education.html", context)
@@ -477,3 +463,35 @@ def create_project_ajax(request):
         )
 
     return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
+
+@require_POST
+def create_education_ajax(request):
+    if not request.user.is_superuser:
+        return JsonResponse(
+            {
+                "message": (
+                    "hanya pemilik portofolio yang dapat "
+                    "menambahkan education."
+                )
+            },
+            status=403,
+        )
+    form = EducationForm(request.POST)
+
+    if form.is_valid():
+        education = form.save()
+
+        return JsonResponse(
+            {
+                "message": "Education berhasil ditambahkan.",
+                "pk" : str(education.id),
+            },
+            status = 201,
+        )
+
+    return JsonResponse(
+        {
+            "errors": form.errors.get_json_data(),
+        },
+        status =400,
+    )
