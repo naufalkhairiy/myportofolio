@@ -40,6 +40,11 @@ class Tugas5BackendTests(TestCase):
             "main:create_education_ajax"
         )
 
+        self.star_url = reverse(
+            "main:toggle_education_star",
+            args=[self.education.id],
+        )
+
     def test_education_json_contains_ajax_and_star_data(self):
         response = self.client.get(
             reverse("main:get_education_json")
@@ -134,6 +139,46 @@ class Tugas5BackendTests(TestCase):
             "institution",
             response.json()["errors"],
         )
+
+    def test_ajax_star_returns_json_without_redirect(self):
+            self.client.force_login(self.member)
+
+            response = self.client.post(
+                self.star_url,
+                HTTP_ACCEPT="application/json",
+            )
+
+            self.assertEqual(
+                response.status_code,
+                200,
+            )
+
+            self.assertEqual(
+                response.json()["message"],
+                "Education diberi star.",
+            )
+
+            self.assertTrue(
+                self.education.starred_by.filter(
+                    pk=self.member.pk
+                ).exists()
+            )
+
+            response = self.client.post(
+                self.star_url,
+                HTTP_ACCEPT="application/json",
+            )
+
+            self.assertEqual(
+                response.status_code,
+                200,
+            )
+
+            self.assertFalse(
+                self.education.starred_by.filter(
+                    pk=self.member.pk
+                ).exists()
+            )
 
 
 class Tugas5BrowserTests(StaticLiveServerTestCase):
@@ -500,3 +545,4 @@ class Tugas5BrowserTests(StaticLiveServerTestCase):
             self.fail(
                 "XSS alert muncul di browser."
             )
+

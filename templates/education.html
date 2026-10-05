@@ -354,6 +354,12 @@
         articleElement.innerHTML =
             completeEducationHtml;
 
+        const starForm = articleElement.querySelector(".star-form");
+
+        if (starForm) {
+            starForm.addEventListener("submit", toggleEducationStar);
+        }
+
         return articleElement;
     }
 
@@ -518,6 +524,44 @@
         }
 
         return cookieValue;
+    }
+
+    // =========================
+    // Star Education via AJAX
+    // =========================
+
+    async function toggleEducationStar(event) {
+        event.preventDefault();
+        const starForm = event.currentTarget;
+        const submitButton = starForm.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+
+        try {
+            const response = await fetch(starForm.action, {
+                method:"POST",
+                headers: {
+                    "Accept" : "application/json",
+                    "X_CSRFToken": getCookie("csrftoken")
+                }
+            });
+
+            const result = await response.json().catch( () => ({}));
+
+            if (!response.ok) {
+                throw new Error(
+                    result.message || 'Terjadi kesalahan (status ${response.status}).'
+                );
+            }
+
+            showToast("Berhasil", result.message, "succes");
+
+            await fetchEducations(searchInput.value.trim(), sortSelect.value);
+        } catch (error) {
+            console.error ("Error toggling education star:", error);
+            showToast("Gagal memperbarui star", error.message || "Tidak dapat terhubung ke server.", "error");
+        } finally {
+            submitButton.disabled = false;
+        }
     }
 
 

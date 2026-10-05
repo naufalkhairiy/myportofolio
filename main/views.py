@@ -252,17 +252,17 @@ def toggle_education_star(request, education_id):
         pk=request.user.pk
     ).exists():
         education.starred_by.remove(request.user)
-        messages.success(
-            request,
-            "Star Education dibatalkan.",
-        )
+        message = "Star Education dibatalkan."
     else:
         education.starred_by.add(request.user)
-        messages.success(
-            request,
-            "Education diberi star.",
-        )
+        message = "Education diberi star."
 
+    if request.headers.get("Accept") == "application/json":
+        return JsonResponse({
+            "message": message,
+        })
+
+    messages.succes (request, message)
     return redirect("main:show_education")
 
 
