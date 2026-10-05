@@ -262,7 +262,7 @@ def toggle_education_star(request, education_id):
             "message": message,
         })
 
-    messages.succes (request, message)
+    messages.success(request, message,)
     return redirect("main:show_education")
 
 
