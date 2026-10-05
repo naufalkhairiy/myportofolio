@@ -1,3 +1,6 @@
+# Historical test suite from Tugas 4.
+# Kept for documentation/history and not part of the current Tugas 5 test run.
+
 import json
 import uuid
 from django.test import TestCase
