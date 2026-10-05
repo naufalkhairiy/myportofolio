@@ -10,11 +10,13 @@ Situs web portofolio pribadi yang dibuat untuk mata kuliah Pemrograman Berbasis 
 
 ## Project Description
 
-Project ini merupakan website portofolio pribadi yang dibuat untuk mata kuliah Pemrograman Berbasis Platform di Universitas Indonesia. Website ini dibangun menggunakan Django, HTML, dan CSS serta dikembangkan secara bertahap mengikuti materi tutorial dan tugas mingguan.
+Project ini merupakan website portofolio pribadi yang dibuat untuk mata kuliah Pemrograman Berbasis Platform di Universitas Indonesia. Website ini dibangun menggunakan Django, HTML, CSS, dan JavaScript serta dikembangkan secara bertahap mengikuti materi tutorial dan tugas mingguan.
 
 Pada tahap awal, website berisi halaman profil statis dengan informasi pribadi, social links, dan riwayat pendidikan. Pada pengembangan berikutnya, website mulai menerapkan arsitektur Model-View-Template (MVT) Django untuk mengelola data secara dinamis melalui database.
 
-Saat ini, data Experience dan Education dikelola menggunakan Django Model dan ditampilkan melalui View serta Django Template Language. Education memiliki halaman daftar tersendiri dan halaman detail untuk setiap riwayat pendidikan. Website juga dilengkapi responsive design, navigation bar, hover effect, transition, serta external link menuju institusi terkait.
+Saat ini, data Experience, Education, dan Project dikelola menggunakan Django Model. Halaman Education menggunakan AJAX untuk mengambil data dari endpoint JSON `/api/education/` melalui Fetch API sehingga pencarian, pengurutan, penambahan data, serta Star dan Unstar dapat dilakukan tanpa full page reload. Education juga memiliki halaman detail untuk setiap riwayat pendidikan.
+
+Website dilengkapi autentikasi dan otorisasi berbasis role, responsive design, navigation bar, feedback menggunakan toast, loading/error/empty state, proteksi CSRF, serta perlindungan XSS pada data yang dirender melalui JavaScript.
 
 ## Main Features
 
@@ -33,16 +35,26 @@ Saat ini, data Experience dan Education dikelola menggunakan Django Model dan di
 - Unit test untuk memverifikasi URL, template, data model, empty state, serta logic model.
 - Project management menggunakan Django `ModelForm`.
 - Create dan Delete Project melalui antarmuka web.
-- Data Project tersedia melalui endpoint JSON dan ditampilkan setelah deserialisasi.
+- Data Project tersedia melalui endpoint JSON dan ditampilkan secara dinamis menggunakan AJAX.
 - Education dapat dibuat, diperbarui, dan dihapus melalui antarmuka web.
 - `EducationForm` menggunakan Django `ModelForm`.
 - Data Education tersedia melalui endpoint JSON.
-- Halaman Education menampilkan data setelah proses deserialisasi JSON.
+- Halaman Education mengambil data dari endpoint `/api/education/` menggunakan Fetch API dan merendernya secara dinamis tanpa full page reload.
 - Pencarian Education berdasarkan nama institusi.
 - Reusable form template untuk Create dan Update Education.
 - Confirmation modal sebelum menghapus Education.
 - Success feedback menggunakan Django Messages.
 - Unit test untuk CRUD, JSON data delivery, filtering, dan search Education.
+- Pencarian Education menggunakan AJAX dengan debouncing 300 ms.
+- Pengurutan Education berdasarkan tahun terbaru atau jumlah Star tanpa reload halaman.
+- Loading state, error state, dan empty state pada daftar Education.
+- Form Add Education ditampilkan melalui modal dan dikirim menggunakan AJAX.
+- Feedback keberhasilan dan kegagalan AJAX ditampilkan menggunakan reusable toast.
+- Request POST AJAX dilindungi menggunakan CSRF token melalui header `X-CSRFToken`.
+- Data yang dimasukkan ke `innerHTML` di-escape menggunakan `escapeHtml()`.
+- Input teks Education juga dibersihkan pada server melalui method `clean_<field>()` dan `strip_tags()`.
+- Star dan Unstar Education dapat dilakukan melalui AJAX tanpa full page reload sebagai fitur interaktivitas tambahan.
+- Automated test menggunakan Django TestCase dan Selenium headless untuk memverifikasi backend serta perilaku AJAX pada browser.
 
 ## Technologies Used
 
@@ -50,12 +62,15 @@ Saat ini, data Experience dan Education dikelola menggunakan Django Model dan di
 - Django
 - Django Template Language (DTL)
 - HTML5
+- JavaScript
+- Fetch API
 - CSS3
 - CSS Grid
 - Flexbox
 - SQLite untuk development lokal
 - PostgreSQL pada deployment PWS
 - Git dan GitHub
+- Selenium WebDriver untuk automated browser testing
 
 ## How to Run Locally
 
@@ -103,10 +118,10 @@ pip install -r requirements.txt
 python manage.py migrate
 ```
 
-7. Jalankan unit test untuk memastikan project berjalan dengan benar.
+7. Jalankan automated test aktif untuk Tugas 5.
 
 ```bash
-python manage.py test main
+python manage.py test main.test_tugas5 -v 2
 ```
 
 8. Jalankan Django development server.
@@ -1066,3 +1081,372 @@ Berikut beberapa contoh prompt dan permintaan yang digunakan selama Tutorial 4 d
 - "Perbarui README tanpa menghapus atau meringkas dokumentasi Week 1 sampai Week 3."
 
 - "Cari halaman resmi PBP terlebih dahulu dan jangan mengarang pertanyaan reflektif yang tidak tersedia."
+
+
+## Week 5 Documentation
+
+Pada Tutorial 5 dan Tugas 5, fokus pengembangan beralih dari halaman yang sebagian besar dirender langsung oleh Django menjadi antarmuka yang lebih interaktif menggunakan JavaScript dan AJAX.
+
+Bagian yang diterapkan pada Tugas 5 adalah Education, yaitu bagian portofolio yang sebelumnya dikembangkan pada Tugas 2 sampai Tugas 4.
+
+### Tutorial 5 - Web Interactivity with JavaScript and AJAX
+
+Pada Tutorial 5, saya mempelajari pola pengambilan dan pengiriman data tanpa melakukan full page reload menggunakan Fetch API.
+
+Konsep utama yang dipelajari meliputi:
+
+- Mengambil data JSON menggunakan `fetch()`.
+- Menggunakan `async` dan `await` untuk menangani operasi asynchronous.
+- Menampilkan loading state, error state, empty state, dan data state.
+- Menggunakan `AbortController` untuk membatalkan request lama yang sudah tidak relevan.
+- Mengimplementasikan search debouncing menggunakan `setTimeout()` dan `clearTimeout()`.
+- Menggunakan Popover API untuk menampilkan form melalui modal.
+- Mengirim `ModelForm` menggunakan `FormData`.
+- Mengirim CSRF token melalui header `X-CSRFToken`.
+- Menampilkan feedback menggunakan reusable toast.
+- Melakukan escaping terhadap data yang dirender melalui JavaScript.
+- Membersihkan input kembali pada server sebagai lapisan perlindungan tambahan terhadap XSS.
+
+### Tugas 5 - AJAX pada Education
+
+Pada Tugas 5, pola AJAX dari Tutorial 5 diterapkan pada bagian Education.
+
+Sebelumnya, halaman Education mendapatkan data melalui proses serialization dan deserialization sebelum object diberikan kembali kepada Django template. Pada implementasi Tugas 5, halaman `/education/` hanya merender struktur dasar halaman, sedangkan daftar Education diambil langsung oleh JavaScript melalui endpoint:
+
+`/api/education/`
+
+Endpoint tersebut mengembalikan data dalam bentuk JSON menggunakan `JsonResponse`.
+
+Setiap object Education yang dikirim memiliki identifier `pk` dan field yang diperlukan oleh frontend, termasuk:
+
+- `institution`
+- `program`
+- `start_year`
+- `end_year`
+- `website`
+- `description`
+- `star_count`
+- `is_starred`
+
+Relasi lengkap `starred_by` tidak dikirim kepada browser.
+
+### AJAX Loading dan Rendering
+
+Template Education menyediakan empat state utama:
+
+- Loading state ketika data sedang diminta.
+- Error state apabila request gagal.
+- Empty state apabila tidak ada data yang ditemukan.
+- Education list apabila request berhasil dan mempunyai data.
+
+JavaScript menjalankan `fetchEducations()` ketika halaman pertama kali dibuka. Function tersebut membuat request menuju endpoint JSON, membaca response menggunakan `response.json()`, kemudian membuat setiap Education menggunakan `buildEducationElement()`.
+
+Dengan pendekatan ini, Django tidak lagi melakukan perulangan terhadap seluruh Education pada template. Data dikirim sebagai JSON dan komponen halaman dibangun oleh JavaScript.
+
+### AJAX Search dan Debouncing
+
+Pencarian Education menggunakan input institusi yang sama seperti implementasi sebelumnya, tetapi request sekarang dilakukan menggunakan AJAX.
+
+Debouncing diterapkan dengan delay 300 milidetik. Setiap kali pengguna mengetik, timer sebelumnya dibatalkan menggunakan `clearTimeout()`. Timer baru kemudian dibuat menggunakan `setTimeout()`.
+
+Request pencarian baru hanya dilakukan ketika pengguna berhenti mengetik selama sekitar 300 milidetik. Pendekatan ini mencegah browser mengirim request untuk setiap karakter yang diketik.
+
+`AbortController` juga digunakan untuk membatalkan request sebelumnya apabila request baru sudah dimulai. Hal tersebut mencegah response lama yang datang terlambat menggantikan hasil pencarian terbaru.
+
+### Modal Add Education dan AJAX POST
+
+Tombol Add Education untuk superuser tidak lagi membuka halaman form terpisah. Tombol tersebut membuka modal menggunakan Popover API.
+
+Form dalam modal tetap menggunakan `EducationForm`, tetapi proses submit dicegat menggunakan `event.preventDefault()` dan dikirim melalui Fetch API ke endpoint AJAX.
+
+Data form dikirim menggunakan:
+
+`new FormData(educationForm)`
+
+Karena request tersebut menggunakan metode POST, CSRF token dibaca dari cookie `csrftoken` dan dikirim melalui header:
+
+`X-CSRFToken`
+
+Apabila form valid, endpoint mengembalikan HTTP 201 dan JSON yang berisi pesan keberhasilan. Modal kemudian ditutup, form di-reset, toast keberhasilan ditampilkan, dan daftar Education dimuat kembali tanpa reload halaman.
+
+Apabila validation gagal, endpoint mengembalikan HTTP 400 dan error dari `EducationForm`. Pengguna kemudian melihat pesan tersebut melalui toast.
+
+Pengguna yang bukan superuser menerima HTTP 403 apabila mencoba memanggil endpoint Add Education secara langsung.
+
+### Perlindungan XSS
+
+Data Education sekarang dirender melalui JavaScript menggunakan `innerHTML`. Karena data JSON tidak secara otomatis memperoleh auto-escaping seperti variable yang dirender langsung oleh Django template, setiap nilai dinamis yang dimasukkan ke HTML terlebih dahulu diproses melalui function `escapeHtml()`.
+
+Function tersebut mengubah karakter khusus HTML seperti `&`, `<`, `>`, `"`, dan `'` menjadi HTML entity sehingga browser menampilkannya sebagai teks dan tidak menafsirkannya sebagai elemen HTML.
+
+Sebagai lapisan perlindungan tambahan pada server, `EducationForm` menggunakan method:
+
+- `clean_institution()`
+- `clean_program()`
+- `clean_description()`
+
+Method tersebut menggunakan `strip_tags()` sebelum data disimpan.
+
+Pada `institution`, input yang hanya berisi tag HTML akan menjadi string kosong setelah proses pembersihan dan menghasilkan `ValidationError`.
+
+Server-side cleaning tidak digunakan sebagai pengganti escaping pada frontend. Keduanya digunakan sebagai lapisan perlindungan pada tahap yang berbeda.
+
+### AJAX Star dan Unstar sebagai Fitur Tambahan
+
+Sebagai fitur tambahan untuk meningkatkan interaktivitas, fitur Star dan Unstar Education yang sebelumnya menggunakan POST biasa diubah agar dapat bekerja melalui AJAX.
+
+Ketika pengguna menekan Star atau Unstar, JavaScript mencegah submit form normal menggunakan `event.preventDefault()` dan mengirim POST menggunakan `fetch()`.
+
+Request AJAX mengirim header:
+
+`Accept: application/json`
+
+View `toggle_education_star` menggunakan header tersebut untuk menentukan apakah response harus berupa JSON atau redirect biasa.
+
+Dengan pendekatan tersebut, endpoint lama tetap memiliki fallback untuk form POST biasa, sedangkan request AJAX mendapatkan `JsonResponse`.
+
+Setelah Star berhasil berubah, daftar Education dimuat ulang melalui `fetchEducations()` sehingga jumlah Star, status Star, dan urutan berdasarkan jumlah Star dapat diperbarui tanpa melakukan full page reload.
+
+### Automated Testing dan Verification
+
+Saya membuat file test aktif:
+
+`main/test_tugas5.py`
+
+Test tersebut menggunakan Django `TestCase` untuk pengujian backend dan `StaticLiveServerTestCase` bersama Selenium WebDriver untuk pengujian browser secara headless.
+
+Skenario yang diuji meliputi:
+
+- Endpoint JSON Education mengembalikan `pk`, `star_count`, dan `is_starred`.
+- Guest dan pengguna biasa tidak dapat menggunakan endpoint Add Education.
+- Superuser dapat menambahkan Education melalui endpoint AJAX.
+- Payload XSS yang hanya berisi tag HTML ditolak oleh server.
+- AJAX Star dan Unstar menghasilkan response JSON dan mengubah relasi `starred_by`.
+- Guest dapat melihat data Education melalui AJAX.
+- Guest tidak melihat tombol Add Education.
+- Guest melihat tautan Login untuk memberikan Star.
+- Search menggunakan debounce.
+- Sorting dilakukan tanpa navigasi halaman.
+- Superuser dapat membuka modal dan menambahkan data tanpa reload.
+- Toast keberhasilan ditampilkan setelah Add Education.
+- Payload XSS tidak menghasilkan JavaScript alert pada browser.
+
+Test lama dari Tugas 4 tetap dipertahankan sebagai dokumentasi history dengan nama:
+
+`main/tugas4_tests.py`
+
+Nama tersebut sengaja tidak diawali dengan `test` sehingga tidak ikut test discovery untuk test aktif Tugas 5.
+
+Sebelum commit akhir, pemeriksaan dilakukan menggunakan:
+
+```bash
+python manage.py check
+python manage.py test main.test_tugas5 -v 2
+python manage.py makemigrations --check --dry-run
+git diff --check
+```
+
+Seluruh 7 automated test Tugas 5 berhasil dijalankan. Django system check juga tidak menemukan issue dan tidak terdapat perubahan model yang membutuhkan migration baru.
+
+### Git dan Branching
+
+Pengembangan Tugas 5 dilakukan menggunakan branch:
+
+`feature/tugas-5-education`
+
+Perubahan dibuat secara bertahap menggunakan conventional commit agar setiap commit mempunyai tujuan yang jelas.
+
+Beberapa commit yang digunakan antara lain:
+
+- `feat: sanitize education text fields`
+- `feat: add AJAX backend for education`
+- `feat: add AJAX education interface`
+- `test: add automated tests for education AJAX`
+- `feat: add AJAX education star toggle`
+- `chore: archive Tugas 4 test suite`
+- `fix: preserve education star fallback`
+
+Pemisahan commit tersebut membantu membedakan perubahan pada validasi server, backend AJAX, frontend AJAX, automated testing, fitur tambahan, dan maintenance.
+
+## Refleksi Tugas 5
+
+### 1. Jelaskan apa itu debouncing dan mengapa teknik ini penting diterapkan pada fitur pencarian yang menggunakan AJAX!
+
+Debouncing adalah teknik untuk menunda eksekusi suatu fungsi sampai tidak ada event baru selama jangka waktu tertentu.
+
+Pada pencarian Education, saya menggunakan debounce selama 300 milidetik. Ketika pengguna mengetik pada search input, timer sebelumnya dibatalkan menggunakan `clearTimeout()`, kemudian timer baru dibuat menggunakan `setTimeout()`.
+
+Sebagai contoh, ketika pengguna mengetik kata `Universitas`, aplikasi tidak langsung mengirim request setiap kali huruf baru dimasukkan. Request baru dilakukan setelah pengguna berhenti mengetik selama kurang lebih 300 milidetik.
+
+Teknik ini penting pada pencarian AJAX karena tanpa debounce setiap perubahan input dapat menghasilkan request HTTP baru. Hal tersebut membuat browser dan server melakukan pekerjaan yang sebenarnya belum diperlukan, terutama ketika pengguna mengetik dengan cepat.
+
+Selain debouncing, implementasi saya juga menggunakan `AbortController`. Apabila request sebelumnya masih berjalan ketika pencarian baru dimulai, request lama dibatalkan. Hal ini membantu mencegah response lama yang datang terlambat menggantikan hasil pencarian terbaru.
+
+### 2. Jelaskan fungsi dari penggunaan `await` ketika kita menggunakan `fetch()`! Apa yang akan terjadi jika kita tidak menggunakan `await`?
+
+`fetch()` merupakan operasi asynchronous dan mengembalikan sebuah `Promise`, bukan langsung sebuah object `Response`.
+
+Pada implementasi saya terdapat kode:
+
+```javascript
+const response = await fetch(url);
+```
+
+`await` membuat function asynchronous menunggu sampai Promise dari `fetch()` selesai dan menghasilkan object `Response`. Setelah itu saya dapat memeriksa nilai seperti `response.ok`.
+
+Body response JSON juga dibaca menggunakan:
+
+```javascript
+const data = await response.json();
+```
+
+`response.json()` juga menghasilkan Promise, sehingga `await` digunakan kembali agar proses parsing JSON selesai sebelum data digunakan.
+
+Jika `await` pada `fetch()` dihapus tetapi kode berikutnya tetap sama, variabel `response` masih berisi Promise dan bukan object `Response`. Karena itu kode yang mengharapkan property seperti `response.ok` atau method seperti `response.json()` tidak dapat digunakan dengan cara yang sama.
+
+`await` bukan satu-satunya cara menangani Promise karena JavaScript juga menyediakan `.then()`. Namun, saya menggunakan `async` dan `await` karena alur request, pemeriksaan response, parsing JSON, rendering data, dan error handling menjadi lebih mudah dibaca secara berurutan.
+
+### 3. Jelaskan apa itu serangan XSS (Cross-Site Scripting) dan mengapa data yang ditampilkan melalui AJAX/JavaScript lebih rentan terhadap serangan ini daripada data yang ditampilkan langsung melalui template Django!
+
+Cross-Site Scripting atau XSS adalah serangan ketika data yang seharusnya hanya ditampilkan sebagai teks berhasil ditafsirkan dan dijalankan oleh browser sebagai HTML atau JavaScript.
+
+Contoh payload yang digunakan dalam pengujian adalah:
+
+```html
+<img src="x" onerror="alert('XSS!')">
+```
+
+Ketika data ditampilkan menggunakan Django Template Language, Django secara default melakukan auto-escaping terhadap variable template. Karakter HTML khusus akan diubah sehingga browser tidak langsung menafsirkannya sebagai tag HTML.
+
+Pada implementasi AJAX, data Education diterima sebagai JSON kemudian digunakan JavaScript untuk membangun HTML secara dinamis. Saya menggunakan `innerHTML` untuk memasukkan hasil tersebut ke halaman.
+
+JSON sendiri tidak memberikan HTML escaping untuk konteks `innerHTML`. Jika data pengguna dimasukkan langsung ke template string tanpa perlindungan, karakter seperti `<` dan `>` dapat dibaca browser sebagai elemen HTML.
+
+Karena itu, pada frontend saya menggunakan function `escapeHtml()` sebelum nilai dinamis dimasukkan ke `innerHTML`. Function tersebut mengubah karakter khusus HTML menjadi HTML entity sehingga browser menampilkannya sebagai teks.
+
+Saya juga menambahkan perlindungan pada server melalui `clean_institution()`, `clean_program()`, dan `clean_description()` pada `EducationForm` menggunakan `strip_tags()`.
+
+Pada field `institution`, input yang setelah proses pembersihan hanya menghasilkan string kosong akan ditolak menggunakan `ValidationError`.
+
+Server-side cleaning bukan pengganti escaping pada frontend. Keduanya digunakan sebagai dua lapisan perlindungan pada tahap yang berbeda.
+
+## AI Usage Disclosure - Week 5
+
+Pada Tutorial 5 dan Tugas 5, saya menggunakan ChatGPT sebagai alat bantu belajar, membaca requirement, melakukan source code review, debugging, merencanakan implementasi, membuat automated test, mengatur Git workflow, dan menyusun dokumentasi.
+
+Saya meminta AI menggunakan Tutorial 5 dan Tugas 5 sebagai sumber utama sebelum menentukan implementasi. Untuk konsep Django, saya menggunakan dokumentasi resmi Django sebagai referensi tambahan. Untuk konsep dasar JavaScript dan browser API, saya juga menggunakan W3Schools sebagai referensi.
+
+### Strategi Penggunaan AI
+
+Pada Week 5 saya menggunakan pendekatan source-first. Saya tidak langsung meminta AI membuat seluruh Tugas 5, tetapi terlebih dahulu meminta AI membaca requirement resmi dan membandingkannya dengan source code yang sudah tersedia.
+
+Implementasi kemudian dibagi menjadi beberapa tahap:
+
+1. Menambahkan server-side cleaning untuk input Education.
+2. Mengubah backend Education agar menyediakan data yang diperlukan AJAX.
+3. Mengubah halaman Education menjadi frontend AJAX.
+4. Menambahkan Star dan Unstar melalui AJAX sebagai fitur interaktivitas tambahan.
+5. Melakukan automated testing dan final verification.
+6. Memperbarui dokumentasi dan AI disclosure.
+
+Saya juga meminta agar implementasi tetap minimal dan tidak menambahkan fitur besar yang tidak diperlukan hanya untuk mengejar indikator nilai.
+
+### Bagian yang Dibantu AI
+
+AI membantu saya pada beberapa bagian berikut:
+
+- Membandingkan Tutorial 5 dan requirement Tugas 5 dengan source code project.
+- Menjelaskan pola `fetch()`, `async`, dan `await`.
+- Menjelaskan dan mengimplementasikan debouncing.
+- Menjelaskan fungsi `AbortController`.
+- Menyusun loading, error, empty, dan data state.
+- Mengubah endpoint Education menjadi `JsonResponse` manual.
+- Membawa `star_count` dan `is_starred` melalui endpoint JSON.
+- Menggunakan modal Add Education dengan Popover API.
+- Mengirim `EducationForm` melalui `FormData`.
+- Mengirim CSRF token melalui header `X-CSRFToken`.
+- Menampilkan feedback melalui reusable toast.
+- Menjelaskan risiko XSS ketika menggunakan `innerHTML`.
+- Menggunakan `escapeHtml()` pada data dari JSON.
+- Menggunakan `strip_tags()` dan method `clean_<field>()` pada server.
+- Mengubah Star dan Unstar menjadi AJAX tanpa membuat endpoint baru.
+- Membuat Django backend test dan Selenium headless browser test.
+- Membaca traceback dan melakukan audit source code.
+- Membantu memisahkan perubahan menjadi conventional commits.
+- Membantu menyusun dokumentasi dan refleksi Tugas 5.
+
+### Keterbatasan AI dan Perbaikan Manual
+
+Penggunaan AI pada Tugas 5 menunjukkan bahwa saran AI tetap perlu dibandingkan dengan source code aktual dan diuji sebelum digunakan.
+
+Pada salah satu tahap, AI sempat mengasumsikan bahwa import `serializers` sudah tidak digunakan dan menyarankan untuk menghapusnya. Setelah source code diperiksa kembali, `show_education()` lama ternyata masih menggunakan proses deserialization. Saya kemudian meminta AI melakukan audit terhadap file aktual sebelum melanjutkan perubahan.
+
+Pada endpoint JSON Education, `return JsonResponse()` juga sempat berada di dalam perulangan. Jika dibiarkan, function akan berhenti setelah Education pertama sehingga object berikutnya tidak akan masuk ke response. Posisi `return` kemudian diperbaiki setelah source code diperiksa kembali.
+
+Terdapat pula typo pada key response AJAX:
+
+`messsage`
+
+yang seharusnya:
+
+`message`
+
+Kesalahan tersebut dapat menyebabkan frontend gagal mengambil pesan melalui `result.message`.
+
+Saat menambahkan test untuk AJAX Star, method test sempat ditempatkan pada class `Tugas5BrowserTests`, padahal method tersebut menggunakan `self.member` dan `self.star_url` yang dibuat pada `Tugas5BackendTests`.
+
+Test kemudian menghasilkan:
+
+```text
+AttributeError: 'Tugas5BrowserTests' object has no attribute 'member'
+```
+
+Saya memindahkan method tersebut ke class backend test yang mempunyai setup sesuai.
+
+Audit berikutnya juga menemukan typo:
+
+`messages.succes`
+
+yang seharusnya:
+
+`messages.success`
+
+Jalur AJAX tetap dapat lolos automated test karena response JSON dikembalikan sebelum kode fallback tersebut dijalankan. Hal ini menunjukkan bahwa keberhasilan satu jalur test belum tentu membuktikan seluruh jalur alternatif bebas dari kesalahan.
+
+Saya juga menggunakan `git diff --check` dan menemukan trailing whitespace pada file test. Walaupun tidak memengaruhi fungsi program, whitespace tersebut tetap dibersihkan sebelum commit.
+
+Karena itu, saya tidak menggunakan output AI sebagai bukti bahwa implementasi sudah benar. Verifikasi akhir tetap dilakukan menggunakan:
+
+```bash
+python manage.py check
+python manage.py test main.test_tugas5 -v 2
+python manage.py makemigrations --check --dry-run
+git diff --check
+git status
+```
+
+Pada verifikasi akhir, seluruh 7 automated test Tugas 5 berhasil dijalankan.
+
+### AI Prompting Log - Week 5
+
+Beberapa contoh prompt dan permintaan yang saya gunakan selama pengerjaan adalah:
+
+- "Baca Tutorial 5 dan Tugas 5 terlebih dahulu sebelum menentukan implementasi."
+- "Gunakan Tutorial 5 sebagai sumber utama, Django documentation untuk Django, dan W3Schools untuk JavaScript."
+- "Targetkan indikator nilai 4 dengan perubahan seminimal mungkin."
+- "Jangan menambahkan fitur besar yang tidak diperlukan."
+- "Jelaskan setiap bagian kode agar saya memahami alurnya."
+- "Audit source code saya sebelum menyarankan penghapusan import."
+- "Kenapa `show_education()` tidak perlu melakukan deserialization lagi setelah menggunakan AJAX?"
+- "Jelaskan debouncing menggunakan `setTimeout()` dan `clearTimeout()`."
+- "Kenapa AJAX POST masih membutuhkan CSRF token?"
+- "Kenapa data yang dimasukkan melalui `innerHTML` harus di-escape?"
+- "Jelaskan kenapa `strip_tags()` bukan pengganti escaping pada JavaScript."
+- "Tambahkan satu fitur interaktif yang sederhana dan relevan untuk indikator nilai 4."
+- "Ubah Star dan Unstar menjadi AJAX tanpa membuat endpoint baru jika tidak diperlukan."
+- "Buat automated test agar pengujian manual dapat diminimalkan."
+- "Gunakan Selenium headless untuk menguji perilaku JavaScript pada browser."
+- "Audit error berdasarkan traceback sebelum mengubah source code."
+- "Cek `git diff --check` sebelum commit."
+- "Pertahankan test Tugas 4 sebagai history tetapi jangan biarkan test lama mengganggu test discovery Tugas 5."
+- "Audit README saya berdasarkan requirement resmi Tugas 5 dan rubrik nilai 4. Jangan tulis ulang seluruh README; beri instruksi patch-style seperti bagian mana yang harus diganti, bagian mana yang harus ditambahkan, dan bagian mana yang sudah benar agar dokumentasi minggu sebelumnya tetap terjaga."
