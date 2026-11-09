@@ -115,6 +115,7 @@ def show_education(request):
         "institution_query": institution_query,
         "sort": request.GET.get("sort", ""),
         "form" : EducationForm(),
+        "can_edit_education": can_edit_education(request.user),
     }
 
     return render(request, "education.html", context)

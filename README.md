@@ -14,7 +14,8 @@ Project ini merupakan website portofolio pribadi yang dibuat untuk mata kuliah P
 
 Pada tahap awal, website berisi halaman profil statis dengan informasi pribadi, social links, dan riwayat pendidikan. Pada pengembangan berikutnya, website mulai menerapkan arsitektur Model-View-Template (MVT) Django untuk mengelola data secara dinamis melalui database.
 
-Saat ini, data Experience, Education, dan Project dikelola menggunakan Django Model. Halaman Education menggunakan AJAX untuk mengambil data dari endpoint JSON `/api/education/` melalui Fetch API sehingga pencarian, pengurutan, penambahan data, serta Star dan Unstar dapat dilakukan tanpa full page reload. Education juga memiliki halaman detail untuk setiap riwayat pendidikan.
+Saat ini, data Experience, Education, dan Project dikelola menggunakan Django Model. Bagian Projects dan Education telah menggunakan Django REST Framework (DRF) dengan endpoint di bawah `/api/v1/`. Halaman Education menggunakan Fetch API untuk menampilkan, mencari, mengurutkan, menambah, mengubah, menghapus, serta memberikan Star dan Unstar tanpa full page reload. Education juga memiliki halaman detail untuk setiap riwayat pendidikan.
+
 
 Website dilengkapi autentikasi dan otorisasi berbasis role, responsive design, navigation bar, feedback menggunakan toast, loading/error/empty state, proteksi CSRF, serta perlindungan XSS pada data yang dirender melalui JavaScript.
 
@@ -71,6 +72,7 @@ Website dilengkapi autentikasi dan otorisasi berbasis role, responsive design, n
 - PostgreSQL pada deployment PWS
 - Git dan GitHub
 - Selenium WebDriver untuk automated browser testing
+- Django REST Framework (DRF)
 
 ## How to Run Locally
 
@@ -118,10 +120,10 @@ pip install -r requirements.txt
 python manage.py migrate
 ```
 
-7. Jalankan automated test aktif untuk Tugas 5.
+7. Jalankan automated test aktif untuk Tugas 6.
 
 ```bash
-python manage.py test main.test_tugas5 -v 2
+python manage.py test main.test_tugas6 -v 2
 ```
 
 8. Jalankan Django development server.
@@ -1450,3 +1452,361 @@ Beberapa contoh prompt dan permintaan yang saya gunakan selama pengerjaan adalah
 - "Cek `git diff --check` sebelum commit."
 - "Pertahankan test Tugas 4 sebagai history tetapi jangan biarkan test lama mengganggu test discovery Tugas 5."
 - "Audit README saya berdasarkan requirement resmi Tugas 5 dan rubrik nilai 4. Jangan tulis ulang seluruh README; beri instruksi patch-style seperti bagian mana yang harus diganti, bagian mana yang harus ditambahkan, dan bagian mana yang sudah benar agar dokumentasi minggu sebelumnya tetap terjaga."
+
+## Week 6 Documentation
+
+Pada Tutorial 7 dan Tugas 6, fokus pengembangan beralih dari penggunaan endpoint JSON biasa menuju implementasi REST API menggunakan Django REST Framework (DRF).
+
+Pada Tutorial 7, implementasi dilakukan pada bagian Projects. Selanjutnya, pada Tugas 6, pola REST API yang sama diterapkan pada bagian Education yang telah dikembangkan sejak tugas-tugas sebelumnya.
+
+### Tutorial 7 - Django REST Framework
+
+Pada Tutorial 7, saya mempelajari cara membangun REST API menggunakan Django REST Framework dengan memisahkan representasi data, validasi, hak akses, dan proses request ke dalam komponen yang sesuai.
+
+Konsep utama yang dipelajari meliputi:
+
+- Menggunakan `ModelSerializer` untuk mengubah model Django menjadi representasi JSON dan memvalidasi input.
+- Menggunakan `SerializerMethodField` untuk menampilkan data hasil perhitungan.
+- Membuat permission class untuk membatasi operasi berdasarkan hak akses pengguna.
+- Membuat function-based API view menggunakan decorator `@api_view`.
+- Mengimplementasikan HTTP method GET, POST, PUT, PATCH, dan DELETE.
+- Menggunakan `SessionAuthentication` untuk mengintegrasikan autentikasi session Django dengan API.
+- Melindungi request yang mengubah data menggunakan CSRF token.
+- Menghubungkan JavaScript Fetch API dengan endpoint REST API.
+- Membuat automated test menggunakan `APITestCase` dan `APIClient`.
+
+Pada Tutorial 7, endpoint Projects ditempatkan di bawah prefix `/api/v1/projects/`. Implementasi ini menjadi referensi untuk membangun API Education pada Tugas 6.
+
+### Tugas 6 - Django REST Framework pada Education
+
+Pada Tugas 6, saya menerapkan Django REST Framework pada model `Education`, dengan mempertahankan data, fitur pencarian, pengurutan, autentikasi, dan sistem otorisasi yang sudah dibuat sebelumnya.
+
+Tujuan utamanya adalah memindahkan proses pengelolaan Education dari endpoint JSON dan AJAX lama menuju REST API yang lebih terstruktur tanpa mengubah desain utama website.
+
+### EducationSerializer dan Validasi Data
+
+Saya menambahkan `EducationSerializer` pada `main/serializers.py` menggunakan `serializers.ModelSerializer`.
+
+Serializer menggunakan daftar field yang eksplisit, yaitu:
+
+- `id`
+- `institution`
+- `program`
+- `start_year`
+- `end_year`
+- `website`
+- `description`
+- `star_count`
+- `is_starred`
+
+Field `star_count` dan `is_starred` menggunakan `SerializerMethodField` yang bersifat read-only.
+
+`star_count` menghitung jumlah akun yang memberikan Star pada Education, sedangkan `is_starred` menentukan apakah pengguna yang sedang mengakses API telah memberikan Star.
+
+Informasi sensitif pengguna, seperti email, password, dan relasi lengkap `starred_by`, tidak disertakan dalam respons Education.
+
+Untuk menjaga keamanan dan kualitas input, saya menggunakan method validasi seperti `validate_institution()`, `validate_program()`, dan `validate_description()`.
+
+Input teks dibersihkan menggunakan `strip_tags()` dan `strip()`. Institution yang menjadi kosong setelah proses pembersihan ditolak menggunakan `serializers.ValidationError`.
+
+Dengan demikian, validasi data tidak hanya bergantung pada form atau JavaScript di browser.
+
+### Permission dan Otorisasi Empat Peran
+
+Saya menggunakan permission class `IsPortfolioOwnerOrEditorOrReadOnly` untuk endpoint Education.
+
+Hak akses dibagi menjadi empat peran:
+
+| Peran | Membaca | Star | Membuat | Mengubah | Menghapus |
+|---|---|---|---|---|---|
+| Guest | Ya | Tidak | Tidak | Tidak | Tidak |
+| User biasa | Ya | Ya | Tidak | Tidak | Tidak |
+| Editor | Ya | Ya | Tidak | Ya | Tidak |
+| Superuser | Ya | Ya | Ya | Ya | Ya |
+
+Permission class memeriksa HTTP method, status autentikasi, status superuser, dan keanggotaan pengguna dalam grup `Editor`.
+
+Editor diperbolehkan mengubah data menggunakan PUT atau PATCH, tetapi tidak diperbolehkan membuat atau menghapus Education.
+
+Endpoint Star menggunakan `IsAuthenticated`. Akun yang memberikan Star selalu diperoleh dari `request.user`, sehingga pengguna tidak bisa memberikan Star menggunakan identitas akun lain melalui payload.
+
+Pemeriksaan permission dilakukan di server, bukan hanya dengan menyembunyikan tombol pada frontend.
+
+### REST API View dan URL Education
+
+Saya menambahkan tiga function-based API view pada `main/api_views.py`:
+
+- `education_list()` untuk GET dan POST.
+- `education_detail()` untuk GET, PUT, PATCH, dan DELETE.
+- `education_star()` untuk POST Star atau Unstar.
+
+Ketiga endpoint menggunakan Django REST Framework dan `SessionAuthentication`.
+
+URL API didaftarkan pada `main/api_urls.py` dengan prefix `/api/v1/`.
+
+Endpoint yang digunakan:
+
+| Endpoint | Method | Fungsi |
+|---|---|---|
+| `/api/v1/education/` | GET | Menampilkan daftar Education |
+| `/api/v1/education/` | POST | Membuat Education |
+| `/api/v1/education/<uuid>/` | GET | Melihat detail Education |
+| `/api/v1/education/<uuid>/` | PUT/PATCH | Mengubah Education |
+| `/api/v1/education/<uuid>/` | DELETE | Menghapus Education |
+| `/api/v1/education/<uuid>/star/` | POST | Memberikan atau membatalkan Star |
+
+Endpoint daftar juga menerima parameter `institution` untuk pencarian dan `sort=stars` untuk pengurutan berdasarkan jumlah Star.
+
+HTTP status yang digunakan mengikuti hasil operasi, seperti 200 untuk request yang berhasil, 201 untuk pembuatan data, 400 untuk validasi tidak valid, 403 untuk akses yang ditolak, 404 untuk data yang tidak ditemukan, dan 204 untuk penghapusan berhasil.
+
+### Integrasi Frontend Education dengan REST API
+
+Saya mengubah JavaScript pada `templates/education.html` agar mengambil dan mengubah data melalui REST API.
+
+Data Education diperoleh melalui `fetch()` dan diproses menggunakan `async` serta `await`. Respons JSON kemudian digunakan untuk membangun elemen HTML secara dinamis.
+
+Fitur pencarian, pengurutan, tambah, edit, Star, dan Delete dapat dilakukan tanpa full page reload.
+
+Saya menggunakan satu modal Education untuk dua operasi:
+
+- Create menggunakan HTTP POST.
+- Update menggunakan HTTP PATCH.
+
+JavaScript menggunakan variabel `editingId` untuk membedakan operasi Create dan Update.
+
+Ketika pengguna memilih Edit, frontend mengambil detail Education melalui GET dan mengisi form menggunakan data dari API.
+
+Saat form disimpan, JavaScript mengirim request ke endpoint yang sesuai dan memperbarui daftar Education setelah operasi berhasil.
+
+Untuk meningkatkan pengalaman pengguna, saya mempertahankan beberapa komponen dari Tugas 5, yaitu loading state, error state, empty state, debouncing pencarian, dan reusable toast.
+
+Kesalahan validasi maupun permission dari API ditampilkan sebagai pesan toast.
+
+Request yang mengubah data dikirim menggunakan header `X-CSRFToken`, sementara data dinamis yang disisipkan ke HTML diproses menggunakan `escapeHtml()` untuk mengurangi risiko XSS.
+
+### Peningkatan UI/UX - Reset Filter Education
+
+Sebagai peningkatan interaktivitas pada Tugas 6, saya menambahkan tombol Reset Filter pada halaman Education.
+
+Fitur ini memungkinkan pengguna menghapus kata kunci pencarian dan mengembalikan pilihan sorting ke kondisi default dalam satu klik. Setelah tombol ditekan, data dimuat ulang menggunakan Fetch API tanpa full page reload.
+
+Implementasi menggunakan event listener JavaScript, `clearTimeout()` untuk membatalkan debounce pencarian sebelumnya, serta `fetchEducations()` untuk memperbarui daftar Education.
+
+Fitur ini bertujuan meningkatkan kemudahan navigasi ketika pengguna melakukan pencarian dan pengurutan data Education.
+
+### Automated Testing dan Verifikasi
+
+Saya membuat automated test baru pada:
+
+`main/test_tugas6.py`
+
+Pengujian menggunakan `APITestCase` dan `APIClient` dari Django REST Framework.
+
+Skenario pengujian meliputi:
+
+- Guest dapat membaca daftar dan detail Education.
+- Guest dan pengguna biasa tidak dapat membuat, mengubah, atau menghapus Education.
+- Editor dapat memperbarui Education menggunakan PATCH dan PUT.
+- Editor tidak dapat membuat atau menghapus Education.
+- Superuser dapat membuat, memperbarui, dan menghapus Education.
+- Endpoint mengembalikan HTTP 404 untuk Education yang tidak ditemukan.
+- Pencarian berdasarkan institution dan sorting berdasarkan Star.
+- Input yang tidak valid menghasilkan HTTP 400.
+- Input teks dengan tag HTML dibersihkan oleh serializer.
+- Pengguna yang sudah login dapat melakukan Star dan Unstar.
+- Guest tidak dapat menggunakan endpoint Star.
+- Field hasil perhitungan Star tidak bisa dimanipulasi melalui request.
+- Database tidak berubah ketika operasi ditolak.
+- Request yang menggunakan session tanpa CSRF token ditolak.
+- Request dengan token CSRF valid dapat diterima sesuai permission.
+
+Pengujian CSRF menggunakan `APIClient(enforce_csrf_checks=True)` dan `.login()` agar pemeriksaan CSRF tidak dilewati seperti pada `force_authenticate()`.
+
+Perintah verifikasi yang digunakan adalah:
+
+```bash
+python manage.py check
+python manage.py test main.test_tugas6 --verbosity 2
+python manage.py test main --verbosity 1
+python manage.py makemigrations --check --dry-run
+git diff --check
+```
+
+Pengujian seluruh aplikasi `main` juga diperlukan untuk memastikan fitur Projects dari Tutorial 7 dan bagian sebelumnya tetap berfungsi setelah penambahan REST API Education.
+
+### Git dan Branching
+
+Pengembangan Tugas 6 dilakukan menggunakan branch:
+
+`tugas-6-education`
+
+Perubahan dibagi berdasarkan komponen backend REST API, integrasi frontend, automated testing, dan dokumentasi.
+
+Pemisahan tersebut membantu menjaga riwayat perubahan tetap jelas dan mempermudah pemeriksaan kode.
+
+---
+
+## Refleksi Tugas 6
+
+### Tugas 6
+
+**1. Jelaskan apa yang dimaksud dengan REST dan mengapa mengembalikan JSON saja belum cukup untuk menyebut sebuah API sebagai RESTful! Jelaskan pula perbedaan PUT dan PATCH beserta contoh kapan masing-masing sebaiknya digunakan!**
+
+REST (Representational State Transfer) merupakan gaya arsitektur untuk membangun layanan berbasis resource yang dapat diakses melalui antarmuka yang konsisten. Dalam konteks web API, resource biasanya diidentifikasi menggunakan URL, sedangkan operasi terhadap resource dilakukan menggunakan HTTP method.
+
+Mengembalikan JSON saja belum cukup untuk membuat sebuah API disebut RESTful karena JSON hanyalah salah satu format representasi data. API juga perlu memperhatikan prinsip REST, seperti pemisahan client dan server, komunikasi yang stateless, penggunaan resource URI, dan pemanfaatan semantik HTTP method secara konsisten.
+
+Pada Tutorial 5, saya menggunakan endpoint JSON untuk menyediakan data kepada JavaScript. Namun, pada Tugas 6, saya menggunakan Django REST Framework untuk membangun API yang lebih terstruktur dengan endpoint daftar, detail, dan Star, serta menggunakan HTTP method dan status code sesuai operasinya.
+
+PUT dan PATCH sama-sama digunakan untuk memperbarui resource, tetapi memiliki perbedaan.
+
+PUT digunakan untuk mengganti representasi resource secara keseluruhan. Contohnya, ketika seluruh data Education ingin diperbarui, client mengirimkan nilai lengkap field yang dapat diubah.
+
+PATCH digunakan untuk mengubah sebagian field tanpa harus mengirim seluruh data. Misalnya ketika hanya nama institusi Education yang ingin diperbarui, client cukup mengirim:
+
+```json
+{
+  "institution": "Universitas Indonesia"
+}
+```
+
+Pada implementasi saya, frontend menggunakan PATCH untuk operasi Edit Education karena pendekatan tersebut memungkinkan pembaruan parsial, sedangkan endpoint detail juga mendukung PUT untuk pembaruan penuh.
+
+**2. Jelaskan peran serializer pada Django REST Framework! Apa keuntungannya dibandingkan merakit dictionary secara manual dengan JsonResponse seperti pada Tutorial 05?**
+
+Serializer pada Django REST Framework berperan untuk mengubah object Django, termasuk instance model, menjadi data Python yang dapat direpresentasikan sebagai JSON. Serializer juga dapat melakukan proses sebaliknya, yaitu membaca input, memvalidasi data, dan menyimpan perubahan ke database.
+
+Pada Tutorial 5, saya membuat respons JSON Education secara manual menggunakan dictionary dan `JsonResponse`. Pendekatan tersebut dapat bekerja, tetapi pengembang perlu menentukan sendiri field respons, mengelola konversi data, dan melakukan validasi melalui komponen lain.
+
+Dengan `ModelSerializer`, saya dapat menghubungkan representasi JSON langsung dengan model Education dan menentukan field yang diperbolehkan secara eksplisit.
+
+Saya juga dapat menggunakan `validate_<field>()` untuk validasi input dan `SerializerMethodField` untuk menghitung `star_count` serta `is_starred`.
+
+Keuntungan lainnya adalah konsistensi. Serializer yang sama dapat digunakan ketika membaca daftar Education, mengambil detail, membuat data, maupun memperbarui data.
+
+Karena itu, penggunaan serializer membantu mengurangi duplikasi kode serta memisahkan logika representasi dan validasi dari API view.
+
+**3. Jelaskan perbedaan autentikasi dan otorisasi pada Django REST Framework! Mengapa hak akses harus diperiksa dengan permission class di server, bukan hanya dengan menyembunyikan tombol di template?**
+
+Autentikasi adalah proses untuk memastikan identitas pengguna yang mengakses aplikasi. Pada implementasi saya, `SessionAuthentication` memanfaatkan session Django untuk mengenali pengguna yang telah login melalui `request.user`.
+
+Otorisasi adalah proses untuk menentukan operasi apa saja yang boleh dilakukan oleh pengguna tersebut.
+
+Sebagai contoh, dua pengguna sama-sama telah login, tetapi pengguna biasa hanya dapat memberikan Star, sedangkan Editor dapat mengubah data Education menggunakan PUT atau PATCH.
+
+Pada Tugas 6, saya menggunakan permission class `IsPortfolioOwnerOrEditorOrReadOnly` untuk menentukan hak akses berdasarkan HTTP method dan peran pengguna.
+
+Pemeriksaan permission harus dilakukan di server karena menyembunyikan tombol di template hanya mengubah tampilan antarmuka. Pengguna masih dapat mencoba mengirim request langsung menggunakan browser developer tools, Postman, atau script HTTP.
+
+Jika server tidak memeriksa permission, pengguna yang tidak memiliki tombol Delete tetap berpotensi memanggil endpoint DELETE secara langsung.
+
+Dengan permission class, Django REST Framework dapat menolak operasi yang tidak diizinkan menggunakan HTTP 403 meskipun request tersebut dibuat di luar antarmuka website.
+
+Karena itu, pembatasan tombol pada frontend digunakan untuk pengalaman pengguna, sedangkan permission server menjadi mekanisme keamanan utama.
+
+**4. Jelaskan mengapa permintaan yang mengubah data tetap memerlukan token CSRF ketika API memakai SessionAuthentication! Mengapa test yang memakai force_authenticate tidak cukup untuk membuktikan bahwa perlindungan CSRF berjalan?**
+
+CSRF (Cross-Site Request Forgery) merupakan serangan yang berusaha membuat browser pengguna yang sedang login mengirim request yang tidak diinginkan ke suatu website.
+
+Ketika API menggunakan `SessionAuthentication`, browser dapat menyertakan session cookie secara otomatis pada request yang sesuai. Jika request yang mengubah data tidak dilindungi, situs lain berpotensi memanfaatkan session pengguna untuk mencoba melakukan operasi tanpa persetujuannya.
+
+Karena itu, request seperti POST, PUT, PATCH, dan DELETE tetap memerlukan perlindungan CSRF.
+
+Pada frontend Education, saya membaca nilai cookie `csrftoken` dan mengirimnya melalui header `X-CSRFToken` saat melakukan operasi yang mengubah data.
+
+Dalam automated testing, `force_authenticate()` memungkinkan request dijalankan sebagai pengguna tertentu tanpa melakukan proses autentikasi session normal. Metode ini berguna untuk menguji permission, tetapi tidak membuktikan bahwa mekanisme CSRF berfungsi.
+
+Untuk menguji CSRF, saya menggunakan `APIClient(enforce_csrf_checks=True)` dengan `.login()` sehingga autentikasi dilakukan melalui session.
+
+Saya kemudian membandingkan request POST tanpa CSRF token, yang seharusnya ditolak dengan HTTP 403, dengan request yang menyertakan token valid dan memiliki permission yang sesuai.
+
+Dengan demikian, pengujian dapat memeriksa perlindungan CSRF secara terpisah dari pengujian permission.
+
+---
+
+## AI Usage Disclosure - Week 6
+
+Pada Tutorial 7 dan Tugas 6, saya menggunakan ChatGPT sebagai alat bantu untuk memahami requirement, merencanakan implementasi, meninjau kode, mempelajari konsep Django REST Framework, melakukan debugging, menyusun automated test, dan memperbarui dokumentasi.
+
+Saya menggunakan instruksi resmi Tutorial 7 dan Tugas 6 sebagai dasar implementasi, kemudian membandingkan saran AI dengan struktur repository dan kode yang telah dibuat pada minggu sebelumnya.
+
+### Strategi Penggunaan AI
+
+Saya menggunakan pendekatan bertahap agar proses pengerjaan tetap dapat dipahami dan diuji.
+
+Tahapan pengerjaan dibagi menjadi:
+
+1. Memeriksa kondisi awal repository, membuat branch, dan menjalankan automated test lama.
+2. Membuat `EducationSerializer` serta validasi data.
+3. Mengimplementasikan permission, API view, dan URL Education.
+4. Mengintegrasikan halaman Education dengan REST API.
+5. Membuat automated test untuk keempat peran, validasi, Star, dan CSRF.
+6. Melakukan verifikasi dan memperbarui dokumentasi README.
+
+Saya meminta AI memberikan perubahan berdasarkan lokasi file yang jelas, menjelaskan sintaks dari dasar, dan tidak menambahkan fitur besar yang tidak diperlukan.
+
+Saya juga menggunakan traceback Django untuk menentukan penyebab error sebelum mengubah bagian kode lainnya.
+
+### Bagian yang Dibantu AI
+
+Bantuan AI mencakup:
+
+- Membaca dan merangkum requirement resmi Tugas 6.
+- Menentukan Education sebagai bagian yang diimplementasikan.
+- Menyusun workflow pengerjaan yang dibagi menjadi beberapa tahap.
+- Menjelaskan `ModelSerializer`, `SerializerMethodField`, dan validasi field.
+- Menjelaskan penggunaan `strip_tags()` dan `ValidationError`.
+- Menjelaskan penggunaan permission class untuk empat role.
+- Membantu menyusun endpoint GET, POST, PUT, PATCH, DELETE, dan Star.
+- Menjelaskan `SessionAuthentication` dan CSRF.
+- Menjelaskan sintaks Python dan Django ORM seperti `filter()`, `exists()`, dan `request.user`.
+- Membantu mengintegrasikan Fetch API dengan endpoint DRF.
+- Menjelaskan penggunaan `async`, `await`, `FormData`, dan `JSON.stringify()`.
+- Menjelaskan penggunaan satu modal untuk Create dan Update.
+- Membantu menangani respons HTTP dan menampilkan pesan melalui toast.
+- Membantu menyusun `APITestCase`, `APIClient`, dan skenario pengujian permission.
+- Menjelaskan fungsi assertion, `setUp()`, dan `refresh_from_db()`.
+- Membantu memperbarui README, refleksi, dan AI disclosure.
+
+### Keterbatasan AI dan Perbaikan Manual
+
+Penggunaan AI menunjukkan bahwa saran implementasi tetap perlu diuji menggunakan kode dan lingkungan aplikasi yang sebenarnya.
+
+Pada saat mengimplementasikan Education API, saya mengalami error:
+
+```text
+AttributeError: 'QuerySet' object has no attribute 'exist'
+```
+
+Error tersebut terjadi karena terdapat pemanggilan `.exist()`, sedangkan method Django ORM yang benar adalah `.exists()`.
+
+Setelah membaca traceback, saya menelusuri fungsi `get_is_starred()` pada `EducationSerializer` dan memperbaiki pemanggilan method tersebut. Perbaikan ini menunjukkan bahwa kesalahan kecil dalam sintaks dapat menyebabkan beberapa endpoint yang menggunakan serializer yang sama mengalami HTTP 500.
+
+Saya juga memahami bahwa keberhasilan `python manage.py check` tidak otomatis membuktikan seluruh fitur berjalan. System check memeriksa konfigurasi dan beberapa masalah sistem, sedangkan kesalahan dalam alur request perlu ditemukan melalui pengujian API dan automated test.
+
+Saran AI juga perlu disesuaikan dengan nama field model, struktur template, dan URL yang benar-benar digunakan dalam repository.
+
+Karena itu, saya tidak menganggap kode hasil bantuan AI langsung benar. Saya menggunakan pengujian dan pembacaan traceback untuk menentukan apakah implementasi sesuai dengan kebutuhan.
+
+Saya tetap bertanggung jawab terhadap perubahan yang diterapkan, proses pengujian, serta hasil akhir aplikasi.
+
+### AI Prompting Log - Week 6
+
+Berikut beberapa contoh permintaan yang saya gunakan selama pengerjaan:
+
+- "Baca requirement Tugas 6 dan cocokkan dengan repository GitHub saya."
+- "Gunakan format README dari tugas sebelumnya agar dokumentasi tetap konsisten."
+- "Targetkan nilai 4 menggunakan perubahan minimum yang relevan."
+- "Buat workflow pengerjaan sebelum mulai mengubah kode."
+- "Jelaskan setiap tahap dari dasar, termasuk sintaks dan fungsi masing-masing bagian kode."
+- "Apakah EducationSerializer perlu migration baru?"
+- "Jelaskan perbedaan PUT dan PATCH pada Education API."
+- "Bagaimana permission Editor membatasi operasi Create, Update, dan Delete?"
+- "Kenapa QuerySet tidak memiliki method exist?"
+- "Kenapa semua endpoint Education error ketika serializer bermasalah?"
+- "Gunakan modal yang sudah ada untuk Add dan Edit agar tidak membuat komponen baru."
+- "Jelaskan cara mengintegrasikan REST API ke frontend tanpa full page reload."
+- "Buat automated test yang mencakup empat role dan pemeriksaan CSRF."
+- "Jelaskan penggunaan APIClient, force_authenticate, dan refresh_from_db."
+- "Jalankan seluruh test main agar fitur Tutorial 7 tetap diuji."
+- "Perbarui README dan AI disclosure tanpa menghapus dokumentasi tugas sebelumnya."
