@@ -46,12 +46,70 @@ class ProjectAPITest(APITestCase):
     def test_guest_and_visitor_cannot_write(self):
         for user in (None, self.visitor):
             self.client.force_authenticate(user=user)
-            self.assertEqual(self.client.post(self.list_url, self.payload, format="json").status_code, 403)
-            self.assertEqual(self.client.patch(self.detail_url, {"title": "Changed"}, format="json").status_code, 403)
-            self.assertEqual(self.client.delete(self.detail_url).status_code, 403)
+            expected_status = 401 if user is None else 403
+
+            self.assertEqual(
+                self.client.post(
+                    self.list_url, self.payload, format="json"
+                ).status_code,
+                expected_status,
+            )
+            self.assertEqual(
+                self.client.patch(
+                    self.detail_url, {"title": "Changed"}, format="json"
+                ).status_code,
+                expected_status,
+            )
+            self.assertEqual(
+                self.client.delete(self.detail_url).status_code,
+                expected_status,
+            )
+
         self.assertEqual(Project.objects.count(), 1)
         self.project.refresh_from_db()
         self.assertEqual(self.project.title, "Portfolio")
+
+    def test_token_login_create_and_logout(self):
+        client = APIClient()
+
+        response = client.post(
+            reverse("api:api_token_auth"),
+            {
+                "username": "owner",
+                "password": "test-password",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        token = response.data["token"]
+
+        client.credentials(
+            HTTP_AUTHORIZATION=f"Token {token}"
+        )
+
+        response = client.post(
+            self.list_url,
+            self.payload,
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+
+        response = client.post(
+            reverse("api:api_logout")
+        )
+
+        self.assertEqual(response.status_code, 204)
+
+        response = client.post(
+            self.list_url,
+            self.payload,
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 401)
 
     def test_owner_can_create(self):
         self.client.force_authenticate(user=self.owner)
